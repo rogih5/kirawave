@@ -4,9 +4,16 @@ import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
 
 const THEME = {
-    bg: '#0d0608', surface: '#160a0c', card: '#1e0d10',
-    border: '#3a1520', primary: '#c0392b', primaryGlow: '#e74c3c',
-    text: '#f5e6e8', muted: '#a08090', success: '#2ecc71',
+    bg: '#0A0F1C',
+    surface: '#0D1425',
+    card: '#111827',
+    border: '#1E2D45',
+    primary: '#22D3EE',
+    primaryGlow: '#67E8F9',
+    accent: '#A78BFA',
+    text: '#F1F5F9',
+    muted: '#64748B',
+    success: '#22D3EE',
 };
 
 const PIX_PAYLOAD = '00020101021126580014br.gov.bcb.pix0136650bbde7-3708-4da9-8cc5-54121b47a2235204000053039865802BR5920HIGOR DE J FRANCISCO6011LARANJEIRAS62070503***6304F261';
@@ -97,12 +104,12 @@ const s = StyleSheet.create({
     roadIcon: { fontSize: 18 },
     roadText: { color: THEME.text, fontSize: 14, flex: 1 },
 
-    pixCard: { backgroundColor: '#1a0a0d', borderWidth: 1, borderColor: '#a82c20', borderRadius: 16, padding: 20, marginTop: 10, alignItems: 'center', gap: 14 },
-    pixTitle: { color: '#e74c3c', fontWeight: '700', fontSize: 16 },
+    pixCard: { backgroundColor: 'rgba(167,139,250,0.06)', borderWidth: 1, borderColor: THEME.accent, borderRadius: 16, padding: 20, marginTop: 10, alignItems: 'center', gap: 14 },
+    pixTitle: { color: THEME.accent, fontWeight: '700', fontSize: 16 },
     pixDesc: { color: THEME.muted, fontSize: 14, textAlign: 'center', lineHeight: 22 },
     qrCode: { width: 160, height: 160, borderRadius: 10, marginTop: 4, marginBottom: 4 },
     btnPrimary: { backgroundColor: THEME.primary, borderRadius: 10, paddingHorizontal: 20, paddingVertical: 12, width: '100%', alignItems: 'center' },
-    btnPrimaryTx: { color: '#fff', fontWeight: '500', fontSize: 14 },
+    btnPrimaryTx: { color: '#0A0F1C', fontWeight: '700', fontSize: 14 },
     btnSuccess: { backgroundColor: THEME.success },
     pixSub: { color: THEME.muted, fontSize: 12, marginTop: 2 },
 });
