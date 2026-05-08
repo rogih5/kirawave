@@ -71,6 +71,16 @@ export default function App() {
     const masterGn = useRef<GainNode | null>(null);
     const ivlRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    // Limpa o áudio quando o componente desmonta (previne bugs no hot-reload)
+    useEffect(() => {
+        return () => {
+            if (acRef.current) {
+                acRef.current.close();
+                acRef.current = null;
+            }
+        };
+    }, []);
+
     // Sync counter
     useEffect(() => {
         const t = setInterval(() => {
@@ -99,7 +109,15 @@ export default function App() {
 
     // ── Audio (web only) ────────────────────────────────────────────
     const buildNoise = useCallback((ac: AudioContext, amb: Ambient, vol: number) => {
-        if (noiseSrc.current) { try { noiseSrc.current.stop(); } catch (_) { } }
+        if (noiseSrc.current) { 
+            try { 
+                noiseSrc.current.stop(); 
+                noiseSrc.current.disconnect();
+            } catch (_) { } 
+        }
+        if (noiseGn.current) {
+            try { noiseGn.current.disconnect(); } catch (_) { }
+        }
         const sr = ac.sampleRate;
         const buf = ac.createBuffer(1, sr * 4, sr);
         const d = buf.getChannelData(0);
@@ -159,7 +177,9 @@ export default function App() {
 
     const handleFreq = (k: FreqKey) => {
         setFreqKey(k);
-        if (oscRRef.current) oscRRef.current.frequency.value = CARRIER + FREQS[k].hz;
+        if (oscRRef.current && acRef.current) {
+            oscRRef.current.frequency.setValueAtTime(CARRIER + FREQS[k].hz, acRef.current.currentTime);
+        }
     };
 
     const handleAmb = (k: AmbientKey) => {
@@ -169,13 +189,17 @@ export default function App() {
 
     const handleBVol = (v: number) => {
         setBVol(v);
-        if (gainLRef.current) gainLRef.current.gain.value = (v / 100) * 0.5;
-        if (gainRRef.current) gainRRef.current.gain.value = (v / 100) * 0.5;
+        if (gainLRef.current && gainRRef.current && acRef.current) {
+            gainLRef.current.gain.setValueAtTime((v / 100) * 0.5, acRef.current.currentTime);
+            gainRRef.current.gain.setValueAtTime((v / 100) * 0.5, acRef.current.currentTime);
+        }
     };
 
     const handleAVol = (v: number) => {
         setAVol(v);
-        if (noiseGn.current) noiseGn.current.gain.value = (v / 100) * 0.25;
+        if (noiseGn.current && acRef.current) {
+            noiseGn.current.gain.setValueAtTime((v / 100) * 0.25, acRef.current.currentTime);
+        }
     };
 
     const s = styles;
