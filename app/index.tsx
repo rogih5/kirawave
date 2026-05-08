@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import * as Clipboard from 'expo-clipboard';
 import {
     StyleSheet,
     Text,
@@ -57,6 +58,12 @@ export default function App() {
     const [done, setDone] = useState(false);
     const [syncCount, setSyncCount] = useState(2847);
     const [audioOn, setAudioOn] = useState(false);
+    const [showPix, setShowPix] = useState(false);
+
+    const copyPix = async () => {
+        await Clipboard.setStringAsync('00020101021126580014br.gov.bcb.pix0136650bbde7-3708-4da9-8cc5-54121b47a2235204000053039865802BR5920HIGOR DE J FRANCISCO6011LARANJEIRAS62070503***6304F261');
+        alert('Código Pix copiado com sucesso! Muito obrigado pelo apoio ❤️');
+    };
 
     // Web Audio (web only)
     const acRef = useRef<AudioContext | null>(null);
@@ -299,6 +306,24 @@ export default function App() {
                     <Text style={s.zenBtnTx}>🧠 Modo Isolamento Neural (Zen)</Text>
                 </TouchableOpacity>
 
+                {/* PIX COLABORATIVO */}
+                <View style={s.pixSection}>
+                    <TouchableOpacity style={s.pixToggleBtn} onPress={() => setShowPix(!showPix)}>
+                        <Text style={s.pixToggleTx}>❤️ Apoiar o Projeto</Text>
+                    </TouchableOpacity>
+                    
+                    {showPix && (
+                        <View style={s.pixCard}>
+                            <Text style={s.pixTitle}>Um gesto de apoio</Text>
+                            <Text style={s.pixDesc}>O KiraWave é um projeto feito com carinho para ajudar no seu foco. Se esta ferramenta fez diferença no seu dia, considere apoiar o desenvolvimento com uma contribuição voluntária.</Text>
+                            <TouchableOpacity style={s.btnPrimary} onPress={copyPix}>
+                                <Text style={s.btnPrimaryTx}>Copiar Pix (Copia e Cola)</Text>
+                            </TouchableOpacity>
+                            <Text style={s.pixSub}>Higor de Jesus Francisco</Text>
+                        </View>
+                    )}
+                </View>
+
                 {/* SHARE CARD */}
                 {done && (
                     <View style={s.shareCard}>
@@ -366,6 +391,13 @@ const styles = StyleSheet.create({
     ambTxOn: { color: THEME.text },
     zenBtn: { backgroundColor: '#1a0a0d', borderWidth: 0.5, borderColor: THEME.border, borderRadius: 10, padding: 11, alignItems: 'center', marginBottom: 14 },
     zenBtnTx: { color: THEME.muted, fontSize: 13 },
+    pixSection: { marginBottom: 16 },
+    pixToggleBtn: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#a82c20', borderRadius: 10, padding: 12, alignItems: 'center' },
+    pixToggleTx: { color: '#e74c3c', fontSize: 13, fontWeight: '500' },
+    pixCard: { backgroundColor: THEME.card, borderWidth: 0.5, borderColor: THEME.border, borderRadius: 12, padding: 18, marginTop: 10, alignItems: 'center', gap: 12 },
+    pixTitle: { color: THEME.text, fontWeight: '600', fontSize: 15 },
+    pixDesc: { color: THEME.muted, fontSize: 13, textAlign: 'center', lineHeight: 20 },
+    pixSub: { color: THEME.muted, fontSize: 11, marginTop: 2 },
     shareCard: { backgroundColor: THEME.card, borderWidth: 0.5, borderColor: THEME.border, borderRadius: 12, padding: 14, gap: 10 },
     shareTitle: { color: THEME.text, fontWeight: '500', fontSize: 13 },
     shareStats: { flexDirection: 'row', gap: 14 },
