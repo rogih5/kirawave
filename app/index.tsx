@@ -132,28 +132,80 @@ export default function App() {
         noiseSrc.current = src; noiseGn.current = gn;
     }, []);
 
-    const bootAudio = useCallback(() => {
-        if (Platform.OS !== 'web') return;
-        if (acRef.current) { acRef.current.resume(); setAudioOn(true); return; }
+    // ref espelho do freqKey para evitar stale closure no bootAudio
+    const freqKeyRef = useRef<FreqKey>(freqKey);
+
+    // Reage a mudanças de freqKey e aplica diretamente no oscilador
+    // (useEffect garante que o state já está atualizado quando roda)
+    useEffect(() => {
+        freqKeyRef.current = freqKey;
+        if (oscRRef.current) {
+            // cancela automações anteriores e aplica o novo valor
+            oscRRef.current.frequency.cancelScheduledValues(0);
+            oscRRef.current.frequency.value = CARRIER + FREQS[freqKey].hz;
+        }
+    }, [freqKey]);
+
+    // ── Garante que o AudioContext existe e está inicializado ─────────
+    const ensureContext = useCallback((): AudioContext | null => {
+        if (Platform.OS !== 'web') return null;
+        if (acRef.current) return acRef.current;
+
         const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
-        if (!AC) return;
+        if (!AC) return null;
+
         const ac = new AC() as AudioContext;
         acRef.current = ac;
-        const master = ac.createGain(); master.gain.value = 1; master.connect(ac.destination);
+
+        // Master gain
+        const master = ac.createGain();
+        master.gain.value = 1;
+        master.connect(ac.destination);
         masterGn.current = master;
-        const merger = ac.createChannelMerger(2); merger.connect(master);
+
+        // Merger estéreo
+        const merger = ac.createChannelMerger(2);
+        merger.connect(master);
+
+        // Gains binaural
         const gL = ac.createGain(); gL.gain.value = (bVol / 100) * 0.5;
         const gR = ac.createGain(); gR.gain.value = (bVol / 100) * 0.5;
-        gL.connect(merger, 0, 0); gR.connect(merger, 0, 1);
-        gainLRef.current = gL; gainRRef.current = gR;
-        const oL = ac.createOscillator(); oL.type = 'sine'; oL.frequency.value = CARRIER;
-        oL.connect(gL); oL.start(); oscLRef.current = oL;
-        const oR = ac.createOscillator(); oR.type = 'sine';
-        oR.frequency.value = CARRIER + FREQS[freqKey].hz;
-        oR.connect(gR); oR.start(); oscRRef.current = oR;
-        buildNoise(ac, AMBIENTS[ambKey], aVol);
-        ac.resume(); setAudioOn(true);
-    }, [bVol, freqKey, ambKey, aVol, buildNoise]);
+        gL.connect(merger, 0, 0);
+        gR.connect(merger, 0, 1);
+        gainLRef.current = gL;
+        gainRRef.current = gR;
+
+        // Osciladores
+        const oL = ac.createOscillator();
+        oL.type = 'sine';
+        oL.frequency.value = CARRIER;
+        oL.connect(gL);
+        oL.start();
+        oscLRef.current = oL;
+
+        const oR = ac.createOscillator();
+        oR.type = 'sine';
+        // Usa o ref para sempre pegar o freqKey mais atual, sem stale closure
+        oR.frequency.value = CARRIER + FREQS[freqKeyRef.current].hz;
+        oR.connect(gR);
+        oR.start();
+        oscRRef.current = oR;
+
+        return ac;
+    // bVol não deve entrar pois só é usado na criação inicial
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const bootAudio = useCallback(() => {
+        const ac = ensureContext();
+        if (!ac) return;
+        // Reconstrói o ruído se ainda não existir (primeira vez após close)
+        if (!noiseSrc.current) {
+            buildNoise(ac, AMBIENTS[ambKey], aVol);
+        }
+        ac.resume();
+        setAudioOn(true);
+    }, [ensureContext, buildNoise, ambKey, aVol]);
 
     const toggleTimer = () => {
         if (!running) {
@@ -176,10 +228,8 @@ export default function App() {
     };
 
     const handleFreq = (k: FreqKey) => {
+        // Apenas atualiza o estado; o useEffect acima aplica no oscilador
         setFreqKey(k);
-        if (oscRRef.current && acRef.current) {
-            oscRRef.current.frequency.setValueAtTime(CARRIER + FREQS[k].hz, acRef.current.currentTime);
-        }
     };
 
     const handleAmb = (k: AmbientKey) => {
@@ -190,8 +240,9 @@ export default function App() {
     const handleBVol = (v: number) => {
         setBVol(v);
         if (gainLRef.current && gainRRef.current && acRef.current) {
-            gainLRef.current.gain.setValueAtTime((v / 100) * 0.5, acRef.current.currentTime);
-            gainRRef.current.gain.setValueAtTime((v / 100) * 0.5, acRef.current.currentTime);
+            const t = acRef.current.currentTime;
+            gainLRef.current.gain.setValueAtTime((v / 100) * 0.5, t);
+            gainRRef.current.gain.setValueAtTime((v / 100) * 0.5, t);
         }
     };
 
