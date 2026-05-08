@@ -61,6 +61,9 @@ export default function App() {
     const [done, setDone] = useState(false);
     const [syncCount, setSyncCount] = useState(2847);
     const [audioOn, setAudioOn] = useState(false);
+    const [sessions, setSessions] = useState<Array<{
+        duration: number; freq: string; amb: string; ts: string;
+    }>>([]);
 
     const acRef = useRef<AudioContext | null>(null);
     const oscLRef = useRef<OscillatorNode | null>(null);
@@ -81,6 +84,20 @@ export default function App() {
             if (acRef.current) acRef.current.close();
         };
     }, []);
+
+    // Salva sessão quando timer conclui
+    const elapsedRef = useRef(0);
+    useEffect(() => { elapsedRef.current = elapsed; }, [elapsed]);
+    useEffect(() => {
+        if (done && elapsedRef.current > 30) {
+            setSessions(prev => [{
+                duration: elapsedRef.current,
+                freq: `${FREQS[freqKey].name} ${FREQS[freqKey].hz}Hz`,
+                amb: AMBIENTS[ambKey].name,
+                ts: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            }, ...prev].slice(0, 10)); // guarda até 10 sessões
+        }
+    }, [done]);
 
     // Sync Counter
     useEffect(() => {
@@ -176,6 +193,12 @@ export default function App() {
 
     const toggleTimer = () => {
         if (!running) {
+            // Se timer está em 00:00, reseta automaticamente antes de iniciar
+            if (rem === 0) {
+                setRem(25 * 60);
+                setElapsed(0);
+                setDone(false);
+            }
             bootAudio();
             setRunning(true);
         } else {
@@ -339,12 +362,36 @@ export default function App() {
                     </TouchableOpacity>
                 </Link>
 
+                {/* CARD SESSÃO CONCLUÍDA */}
                 {done && (
                     <View style={styles.shareCard}>
-                        <Text style={styles.shareTitle}>Sessão concluída</Text>
+                        <Text style={styles.shareTitle}>🎯 Sessão concluída!</Text>
+                        <Text style={styles.shareSub}>
+                            {fmt(elapsedRef.current)} · {FREQS[freqKey].name} {FREQS[freqKey].hz}Hz · {AMBIENTS[ambKey].name}
+                        </Text>
                         <TouchableOpacity style={styles.btnPrimary} onPress={resetTimer}>
-                            <Text style={styles.btnPrimaryTx}>Nova Sessão</Text>
+                            <Text style={styles.btnPrimaryTx}>▶ Nova Sessão (25:00)</Text>
                         </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* HISTÓRICO DE SESSÕES */}
+                {sessions.length > 0 && (
+                    <View style={styles.historyBlock}>
+                        <Text style={styles.sectionLabel}>SESSÕES DE HOJE</Text>
+                        {sessions.map((s, i) => (
+                            <View key={i} style={styles.historyItem}>
+                                <Text style={styles.historyTime}>{fmt(s.duration)}</Text>
+                                <View style={styles.historyMeta}>
+                                    <Text style={styles.historyFreq}>{s.freq}</Text>
+                                    <Text style={styles.historyAmb}>{s.amb}</Text>
+                                </View>
+                                <Text style={styles.historyTs}>{s.ts}</Text>
+                            </View>
+                        ))}
+                        <Text style={styles.historyTotal}>
+                            Total: {fmt(sessions.reduce((acc, s) => acc + s.duration, 0))}
+                        </Text>
                     </View>
                 )}
             </ScrollView>
@@ -403,6 +450,16 @@ const styles = StyleSheet.create({
     sliderLabel: { color: THEME.muted, fontSize: 12, width: 68 },
     sliderVal: { color: THEME.text, fontSize: 12, width: 36, textAlign: 'right' },
 
-    shareCard: { backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.border, borderRadius: 14, padding: 20, alignItems: 'center', gap: 12, marginTop: 16 },
-    shareTitle: { color: THEME.text, fontWeight: '600', fontSize: 15 },
+    shareCard: { backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.primary, borderRadius: 14, padding: 20, alignItems: 'center', gap: 10, marginTop: 16 },
+    shareTitle: { color: THEME.text, fontWeight: '700', fontSize: 16 },
+    shareSub: { color: THEME.muted, fontSize: 13 },
+
+    historyBlock: { marginTop: 8, marginBottom: 20 },
+    historyItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: THEME.border },
+    historyTime: { color: THEME.primary, fontWeight: '700', fontSize: 15, width: 52, fontVariant: ['tabular-nums'] as any },
+    historyMeta: { flex: 1 },
+    historyFreq: { color: THEME.text, fontSize: 13, fontWeight: '500' },
+    historyAmb: { color: THEME.muted, fontSize: 11 },
+    historyTs: { color: THEME.muted, fontSize: 11 },
+    historyTotal: { color: THEME.accent, fontWeight: '600', fontSize: 13, textAlign: 'right', marginTop: 10 },
 });
