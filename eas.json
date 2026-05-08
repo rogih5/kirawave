@@ -1,0 +1,48 @@
+{
+    "cli": {
+        "version": ">= 5.9.0"
+    },
+    "build": {
+        "development": {
+            "developmentClient": true,
+            "distribution": "internal",
+            "android": {
+                "buildType": "apk"
+            },
+            "ios": {
+                "simulator": true
+            }
+        },
+        "preview": {
+            "distribution": "internal",
+            "android": {
+                "buildType": "apk"
+            },
+            "ios": {
+                "simulator": false
+            }
+        },
+        "production": {
+            "autoIncrement": true,
+            "android": {
+                "buildType": "app-bundle"
+            },
+            "ios": {
+                "credentialsSource": "remote"
+            }
+        }
+    },
+    "submit": {
+        "production": {
+            "android": {
+                "serviceAccountKeyPath": "./google-play-key.json",
+                "track": "internal"
+            },
+            "ios": {
+                "appleId": "SEU_APPLE_ID@email.com",
+                "ascAppId": "SEU_APP_STORE_CONNECT_APP_ID",
+                "appleTeamId": "SEU_TEAM_ID"
+            }
+        }
+    }
+}

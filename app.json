@@ -1,0 +1,76 @@
+{
+  "expo": {
+    "name": "KiraWave",
+    "slug": "kirawave",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "kirawave",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0d0608",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d0608"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.seunome.kirawave",
+      "buildNumber": "1",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ],
+        "NSMicrophoneUsageDescription": "KiraWave usa áudio binaural para foco."
+      }
+    },
+    "android": {
+      "package": "com.seuname.kirawave",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d0608"
+      },
+      "permissions": [
+        "android.permission.FOREGROUND_SERVICE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "static",
+      "name": "KiraWave",
+      "shortName": "KiraWave",
+      "description": "Foco e produtividade com áudio binaural para TDAH",
+      "themeColor": "#c0392b",
+      "backgroundColor": "#0d0608",
+      "display": "standalone",
+      "orientation": "portrait",
+      "scope": "/",
+      "startUrl": "/"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "SEU_PROJECT_ID_AQUI"
+      }
+    }
+  }
+}

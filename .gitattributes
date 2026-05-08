@@ -1,0 +1,7 @@
+* text=auto
+
+# Garantir que arquivos específicos sempre usem LF (opcional, mas seguro)
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.js text eol=lf
