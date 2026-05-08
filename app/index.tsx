@@ -74,10 +74,15 @@ export default function App() {
     // Limpa o áudio quando o componente desmonta (previne bugs no hot-reload)
     useEffect(() => {
         return () => {
-            if (acRef.current) {
-                acRef.current.close();
-                acRef.current = null;
-            }
+            if (acRef.current) { try { acRef.current.close(); } catch(_) {} }
+            acRef.current = null;
+            oscLRef.current = null;
+            oscRRef.current = null;
+            gainLRef.current = null;
+            gainRRef.current = null;
+            noiseSrc.current = null;
+            noiseGn.current = null;
+            masterGn.current = null;
         };
     }, []);
 
@@ -293,7 +298,7 @@ export default function App() {
                     <Text style={[s.audioTx, audioOn && s.audioTxOn]}>
                         {audioOn
                             ? `🎧 Binaural ativo · ${FREQS[freqKey].name} ${FREQS[freqKey].hz}Hz + ${AMBIENTS[ambKey].name}`
-                            : 'Toque em Iniciar para ativar os binaurais'}
+                            : '🎧 Use fones · Toque Iniciar para ativar'}
                     </Text>
                 </View>
 
