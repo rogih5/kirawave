@@ -1,6 +1,8 @@
+
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'expo-router';
+import AmbientBackground from './components/AmbientBackground';
 import {
     StyleSheet,
     Text,
@@ -9,17 +11,14 @@ import {
     ScrollView,
     Platform,
     Dimensions,
-    Image,
 } from 'react-native';
 
-// ── Tipos ─────────────────────────────────────────────────────────
 type FreqKey = 'alpha' | 'theta' | 'beta' | 'gamma';
 type AmbientKey = 'rain' | 'cafe' | 'space' | 'forest' | 'white';
 
 interface Freq { name: string; hz: number; desc: string; }
 interface Ambient { name: string; emoji: string; filterType: BiquadFilterType; freq: number; Q: number; }
 
-// ── Dados ──────────────────────────────────────────────────────────
 const FREQS: Record<FreqKey, Freq> = {
     alpha: { name: 'Alpha', hz: 10, desc: 'Foco relaxado · fluxo' },
     theta: { name: 'Theta', hz: 7, desc: 'Meditação · intuição' },
@@ -36,24 +35,20 @@ const AMBIENTS: Record<AmbientKey, Ambient> = {
 };
 
 const CARRIER = 200;
+
 const THEME = {
     bg: '#0A0F1C',
     surface: '#0D1425',
     card: '#111827',
     border: '#1E2D45',
     primary: '#22D3EE',
-    primaryGlow: '#67E8F9',
     accent: '#A78BFA',
     text: '#F1F5F9',
     muted: '#64748B',
-    success: '#22D3EE',
 };
 
-// ── Utilitários ───────────────────────────────────────────────────
-const fmt = (s: number) =>
-    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-// ── Componente principal ───────────────────────────────────────────
 export default function App() {
     const [rem, setRem] = useState(25 * 60);
     const [running, setRunning] = useState(false);
@@ -61,13 +56,12 @@ export default function App() {
     const [freqKey, setFreqKey] = useState<FreqKey>('alpha');
     const [ambKey, setAmbKey] = useState<AmbientKey>('rain');
     const [bVol, setBVol] = useState(70);
-    const [aVol, setAVol] = useState(35);
+    const [aVol, setAVol] = useState(45);
     const [zenMode, setZenMode] = useState(false);
     const [done, setDone] = useState(false);
     const [syncCount, setSyncCount] = useState(2847);
     const [audioOn, setAudioOn] = useState(false);
 
-    // Web Audio (web only)
     const acRef = useRef<AudioContext | null>(null);
     const oscLRef = useRef<OscillatorNode | null>(null);
     const oscRRef = useRef<OscillatorNode | null>(null);
@@ -76,28 +70,23 @@ export default function App() {
     const noiseSrc = useRef<AudioBufferSourceNode | null>(null);
     const noiseGn = useRef<GainNode | null>(null);
     const masterGn = useRef<GainNode | null>(null);
-    const ivlRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const ivlRef = useRef<NodeJS.Timeout | null>(null);
+    const freqKeyRef = useRef<FreqKey>('alpha');
 
-    // Limpa o áudio quando o componente desmonta (previne bugs no hot-reload)
+    useEffect(() => { freqKeyRef.current = freqKey; }, [freqKey]);
+
+    // Cleanup
     useEffect(() => {
         return () => {
-            if (acRef.current) { try { acRef.current.close(); } catch(_) {} }
-            acRef.current = null;
-            oscLRef.current = null;
-            oscRRef.current = null;
-            gainLRef.current = null;
-            gainRRef.current = null;
-            noiseSrc.current = null;
-            noiseGn.current = null;
-            masterGn.current = null;
+            if (acRef.current) acRef.current.close();
         };
     }, []);
 
-    // Sync counter
+    // Sync Counter
     useEffect(() => {
         const t = setInterval(() => {
             setSyncCount(c => Math.max(2400, Math.min(3500, c + Math.floor(Math.random() * 7) - 3)));
-        }, 5000);
+        }, 6000);
         return () => clearInterval(t);
     }, []);
 
@@ -116,105 +105,71 @@ export default function App() {
             });
             setElapsed(e => e + 1);
         }, 1000);
-        return () => clearInterval(ivlRef.current!);
+        return () => { if (ivlRef.current) clearInterval(ivlRef.current); };
     }, [running]);
 
-    // ── Audio (web only) ────────────────────────────────────────────
+    // Web Audio
     const buildNoise = useCallback((ac: AudioContext, amb: Ambient, vol: number) => {
-        if (noiseSrc.current) { 
-            try { 
-                noiseSrc.current.stop(); 
-                noiseSrc.current.disconnect();
-            } catch (_) { } 
-        }
-        if (noiseGn.current) {
-            try { noiseGn.current.disconnect(); } catch (_) { }
-        }
+        if (noiseSrc.current) noiseSrc.current.stop();
         const sr = ac.sampleRate;
         const buf = ac.createBuffer(1, sr * 4, sr);
         const d = buf.getChannelData(0);
         for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+
         const src = ac.createBufferSource();
         src.buffer = buf; src.loop = true;
         const flt = ac.createBiquadFilter();
-        flt.type = amb.filterType; flt.frequency.value = amb.freq; flt.Q.value = amb.Q;
-        const gn = ac.createGain(); gn.gain.value = (vol / 100) * 0.25;
+        flt.type = amb.filterType;
+        flt.frequency.value = amb.freq;
+        flt.Q.value = amb.Q;
+
+        const gn = ac.createGain();
+        gn.gain.value = (vol / 100) * 0.25;
+
         src.connect(flt); flt.connect(gn); gn.connect(masterGn.current!);
         src.start();
-        noiseSrc.current = src; noiseGn.current = gn;
+        noiseSrc.current = src;
+        noiseGn.current = gn;
     }, []);
 
-    // ref espelho do freqKey para evitar stale closure no bootAudio
-    const freqKeyRef = useRef<FreqKey>(freqKey);
-
-    // Reage a mudanças de freqKey e aplica diretamente no oscilador
-    // (useEffect garante que o state já está atualizado quando roda)
-    useEffect(() => {
-        freqKeyRef.current = freqKey;
-        if (oscRRef.current) {
-            // cancela automações anteriores e aplica o novo valor
-            oscRRef.current.frequency.cancelScheduledValues(0);
-            oscRRef.current.frequency.value = CARRIER + FREQS[freqKey].hz;
-        }
-    }, [freqKey]);
-
-    // ── Garante que o AudioContext existe e está inicializado ─────────
-    const ensureContext = useCallback((): AudioContext | null => {
-        if (Platform.OS !== 'web') return null;
-        if (acRef.current) return acRef.current;
+    const ensureContext = useCallback(() => {
+        if (Platform.OS !== 'web' || acRef.current) return acRef.current;
 
         const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
-        if (!AC) return null;
-
-        const ac = new AC() as AudioContext;
+        const ac = new AC();
         acRef.current = ac;
 
-        // Master gain
         const master = ac.createGain();
-        master.gain.value = 1;
         master.connect(ac.destination);
         masterGn.current = master;
 
-        // Merger estéreo
         const merger = ac.createChannelMerger(2);
         merger.connect(master);
 
-        // Gains binaural
         const gL = ac.createGain(); gL.gain.value = (bVol / 100) * 0.5;
         const gR = ac.createGain(); gR.gain.value = (bVol / 100) * 0.5;
         gL.connect(merger, 0, 0);
         gR.connect(merger, 0, 1);
+
         gainLRef.current = gL;
         gainRRef.current = gR;
 
-        // Osciladores
-        const oL = ac.createOscillator();
-        oL.type = 'sine';
-        oL.frequency.value = CARRIER;
-        oL.connect(gL);
-        oL.start();
-        oscLRef.current = oL;
+        const oL = ac.createOscillator(); oL.type = 'sine'; oL.frequency.value = CARRIER;
+        const oR = ac.createOscillator(); oR.type = 'sine'; oR.frequency.value = CARRIER + FREQS[freqKeyRef.current].hz;
 
-        const oR = ac.createOscillator();
-        oR.type = 'sine';
-        // Usa o ref para sempre pegar o freqKey mais atual, sem stale closure
-        oR.frequency.value = CARRIER + FREQS[freqKeyRef.current].hz;
-        oR.connect(gR);
-        oR.start();
+        oL.connect(gL); oR.connect(gR);
+        oL.start(); oR.start();
+
+        oscLRef.current = oL;
         oscRRef.current = oR;
 
         return ac;
-    // bVol não deve entrar pois só é usado na criação inicial
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [bVol]);
 
     const bootAudio = useCallback(() => {
         const ac = ensureContext();
         if (!ac) return;
-        // Reconstrói o ruído se ainda não existir (primeira vez após close)
-        if (!noiseSrc.current) {
-            buildNoise(ac, AMBIENTS[ambKey], aVol);
-        }
+        if (!noiseSrc.current) buildNoise(ac, AMBIENTS[ambKey], aVol);
         ac.resume();
         setAudioOn(true);
     }, [ensureContext, buildNoise, ambKey, aVol]);
@@ -225,24 +180,30 @@ export default function App() {
             setRunning(true);
         } else {
             setRunning(false);
-            if (acRef.current) { acRef.current.suspend(); setAudioOn(false); }
+            if (acRef.current) acRef.current.suspend();
+            setAudioOn(false);
         }
     };
 
     const resetTimer = () => {
-        setRunning(false); setRem(25 * 60); setElapsed(0); setDone(false);
-        if (acRef.current) { acRef.current.suspend(); setAudioOn(false); }
+        setRunning(false);
+        setRem(25 * 60);
+        setElapsed(0);
+        setDone(false);
+        if (acRef.current) acRef.current.suspend();
+        setAudioOn(false);
     };
 
     const skipTimer = () => {
-        setRunning(false); setElapsed(rem); setRem(0); setDone(true);
-        if (acRef.current) { acRef.current.suspend(); setAudioOn(false); }
+        setRunning(false);
+        setElapsed(rem);
+        setRem(0);
+        setDone(true);
+        if (acRef.current) acRef.current.suspend();
+        setAudioOn(false);
     };
 
-    const handleFreq = (k: FreqKey) => {
-        // Apenas atualiza o estado; o useEffect acima aplica no oscilador
-        setFreqKey(k);
-    };
+    const handleFreq = (k: FreqKey) => setFreqKey(k);
 
     const handleAmb = (k: AmbientKey) => {
         setAmbKey(k);
@@ -251,8 +212,8 @@ export default function App() {
 
     const handleBVol = (v: number) => {
         setBVol(v);
-        if (gainLRef.current && gainRRef.current && acRef.current) {
-            const t = acRef.current.currentTime;
+        if (gainLRef.current && gainRRef.current) {
+            const t = acRef.current?.currentTime || 0;
             gainLRef.current.gain.setValueAtTime((v / 100) * 0.5, t);
             gainRRef.current.gain.setValueAtTime((v / 100) * 0.5, t);
         }
@@ -265,211 +226,183 @@ export default function App() {
         }
     };
 
-    const s = styles;
-
-    // ── ZEN MODE ───────────────────────────────────────────────────
+    // Zen Mode
     if (zenMode) {
         return (
-            <View style={[s.root, s.zenRoot]}>
+            <View style={styles.zenRoot}>
                 <StatusBar style="light" />
-                <Text style={s.zenTimer}>{fmt(rem)}</Text>
-                <Text style={s.zenSub}>{FREQS[freqKey].name} · {AMBIENTS[ambKey].name}</Text>
-                <TouchableOpacity style={s.btnGhost} onPress={() => setZenMode(false)}>
-                    <Text style={s.btnGhostTx}>Pausar conexão</Text>
+                <AmbientBackground ambKey={ambKey} intensity={aVol / 85} />
+                <Text style={styles.zenTimer}>{fmt(rem)}</Text>
+                <Text style={styles.zenSub}>
+                    {FREQS[freqKey].name} {FREQS[freqKey].hz}Hz • {AMBIENTS[ambKey].name}
+                </Text>
+                <TouchableOpacity style={styles.btnGhost} onPress={() => setZenMode(false)}>
+                    <Text style={styles.btnGhostTx}>Sair do Modo Zen</Text>
                 </TouchableOpacity>
             </View>
         );
     }
 
     return (
-        <View style={s.root}>
+        <View style={styles.root}>
             <StatusBar style="light" />
+            <AmbientBackground ambKey={ambKey} intensity={aVol / 100} />
 
-            {/* HEADER */}
-            <View style={s.header}>
-                <View style={s.logoRow}>
-                    <View style={s.logoDot} />
-                    <Text style={s.logoText}>KiraWave</Text>
+            {/* Header */}
+            <View style={styles.header}>
+                <View style={styles.logoRow}>
+                    <View style={styles.logoDot} />
+                    <Text style={styles.logoText}>KiraWave</Text>
                 </View>
-                <View style={s.syncPill}>
-                    <View style={s.syncDot} />
-                    <Text style={s.syncTx}>{syncCount.toLocaleString('pt-BR')} sincronizados</Text>
+                <View style={styles.syncPill}>
+                    <View style={styles.syncDot} />
+                    <Text style={styles.syncTx}>{syncCount.toLocaleString('pt-BR')} focando agora</Text>
                 </View>
             </View>
 
-            <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
-
-                {/* AUDIO STATUS */}
-                <View style={s.audioBar}>
-                    <View style={[s.audioDot, audioOn && s.audioDotOn]} />
-                    <Text style={[s.audioTx, audioOn && s.audioTxOn]}>
-                        {audioOn
-                            ? `🎧 Binaural ativo · ${FREQS[freqKey].name} ${FREQS[freqKey].hz}Hz + ${AMBIENTS[ambKey].name}`
-                            : '🎧 Use fones · Toque Iniciar para ativar'}
+            <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+                {/* Timer */}
+                <View style={styles.timerBlock}>
+                    <Text style={styles.timerDisplay}>{fmt(rem)}</Text>
+                    <Text style={styles.timerFreq}>
+                        {FREQS[freqKey].name} {FREQS[freqKey].hz}Hz • {AMBIENTS[ambKey].name}
                     </Text>
-                </View>
 
-                {/* TIMER */}
-                <View style={s.timerBlock}>
-                    <Text style={s.timerDisplay}>{fmt(rem)}</Text>
-                    <Text style={s.timerLabel}>Sessão de foco · Pomodoro</Text>
-                    <View style={s.timerCtrl}>
-                        <TouchableOpacity style={s.btnGhost} onPress={resetTimer}>
-                            <Text style={s.btnGhostTx}>↺</Text>
+                    <View style={styles.timerCtrl}>
+                        <TouchableOpacity style={styles.btnGhost} onPress={resetTimer}>
+                            <Text style={styles.btnGhostTx}>↺</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={s.btnPrimary} onPress={toggleTimer}>
-                            <Text style={s.btnPrimaryTx}>{running ? 'Pausar' : rem === 0 ? 'Reiniciar' : 'Iniciar sessão'}</Text>
+                        <TouchableOpacity style={styles.btnPrimary} onPress={toggleTimer}>
+                            <Text style={styles.btnPrimaryTx}>
+                                {running ? '⏸ Pausar' : '▶ Iniciar sessão'}
+                            </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={s.btnGhost} onPress={skipTimer}>
-                            <Text style={s.btnGhostTx}>⏭</Text>
+                        <TouchableOpacity style={styles.btnGhost} onPress={skipTimer}>
+                            <Text style={styles.btnGhostTx}>⏭</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
 
-                {/* FREQ CARDS */}
-                <Text style={s.sectionLabel}>FREQUÊNCIA BINAURAL</Text>
-                <View style={s.freqGrid}>
+                {/* Frequências */}
+                <Text style={styles.sectionLabel}>FREQUÊNCIA BINAURAL</Text>
+                <View style={styles.freqGrid}>
                     {(Object.entries(FREQS) as [FreqKey, Freq][]).map(([k, f]) => (
                         <TouchableOpacity
                             key={k}
-                            style={[s.freqCard, freqKey === k && s.freqCardOn]}
+                            style={[styles.freqCard, freqKey === k && styles.freqCardOn]}
                             onPress={() => handleFreq(k)}
                         >
-                            <View style={s.freqTop}>
-                                <Text style={s.freqName}>{f.name}</Text>
-                                <View style={[s.freqDot, freqKey === k && s.freqDotOn]} />
-                            </View>
-                            <Text style={s.freqHz}>{f.hz} Hz</Text>
-                            <Text style={s.freqDesc}>{f.desc}</Text>
+                            <Text style={styles.freqName}>{f.name}</Text>
+                            <Text style={styles.freqHz}>{f.hz} Hz</Text>
+                            <Text style={styles.freqDesc}>{f.desc}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
 
-                {/* VOLUME SLIDERS — web only, native needs a slider lib */}
+                {/* Sliders (Web) */}
                 {Platform.OS === 'web' && (
-                    <View style={s.sliderBlock}>
-                        <View style={s.sliderRow}>
-                            <Text style={s.sliderLabel}>Binaural</Text>
-                            <input
-                                type="range" min={0} max={100} value={bVol}
-                                onChange={e => handleBVol(Number(e.target.value))}
-                                style={{ flex: 1, accentColor: THEME.primary }}
-                            />
-                            <Text style={s.sliderVal}>{bVol}%</Text>
+                    <View style={styles.sliderBlock}>
+                        <View style={styles.sliderRow}>
+                            <Text style={styles.sliderLabel}>Binaural</Text>
+                            <input type="range" min={0} max={100} value={bVol} onChange={e => handleBVol(Number(e.target.value))} />
+                            <Text style={styles.sliderVal}>{bVol}%</Text>
                         </View>
-                        <View style={s.sliderRow}>
-                            <Text style={s.sliderLabel}>Ambiente</Text>
-                            <input
-                                type="range" min={0} max={100} value={aVol}
-                                onChange={e => handleAVol(Number(e.target.value))}
-                                style={{ flex: 1, accentColor: THEME.primary }}
-                            />
-                            <Text style={s.sliderVal}>{aVol}%</Text>
+                        <View style={styles.sliderRow}>
+                            <Text style={styles.sliderLabel}>Ambiente</Text>
+                            <input type="range" min={0} max={100} value={aVol} onChange={e => handleAVol(Number(e.target.value))} />
+                            <Text style={styles.sliderVal}>{aVol}%</Text>
                         </View>
                     </View>
                 )}
 
-                {/* AMBIENT */}
-                <Text style={s.sectionLabel}>SOM AMBIENTE</Text>
-                <View style={s.ambientGrid}>
+                {/* Ambientes */}
+                <Text style={styles.sectionLabel}>SOM AMBIENTE</Text>
+                <View style={styles.ambientGrid}>
                     {(Object.entries(AMBIENTS) as [AmbientKey, Ambient][]).map(([k, a]) => (
                         <TouchableOpacity
                             key={k}
-                            style={[s.ambBtn, ambKey === k && s.ambBtnOn]}
+                            style={[styles.ambBtn, ambKey === k && styles.ambBtnOn]}
                             onPress={() => handleAmb(k)}
                         >
-                            <Text style={[s.ambTx, ambKey === k && s.ambTxOn]}>{a.emoji} {a.name}</Text>
+                            <Text style={[styles.ambTx, ambKey === k && styles.ambTxOn]}>{a.emoji} {a.name}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
 
-                {/* ZEN BUTTON */}
-                <TouchableOpacity style={s.zenBtn} onPress={() => { setZenMode(true); if (!running) toggleTimer(); }}>
-                    <Text style={s.zenBtnTx}>🧠 Modo Isolamento Neural (Zen)</Text>
+                <TouchableOpacity style={styles.zenBtn} onPress={() => { setZenMode(true); if (!running) toggleTimer(); }}>
+                    <Text style={styles.zenBtnTx}>🧠 Modo Zen (Isolamento Total)</Text>
                 </TouchableOpacity>
 
-                {/* ABOUT LINK */}
                 <Link href="/about" asChild>
-                    <TouchableOpacity style={s.aboutBtn}>
-                        <Text style={s.aboutBtnTx}>✨ Roadmap & Apoio</Text>
+                    <TouchableOpacity style={styles.aboutBtn}>
+                        <Text style={styles.aboutBtnTx}>✨ Roadmap & Apoio via Pix</Text>
                     </TouchableOpacity>
                 </Link>
 
-                {/* SHARE CARD */}
                 {done && (
-                    <View style={s.shareCard}>
-                        <Text style={s.shareTitle}>Card de Sincronização · Tema Kira</Text>
-                        <View style={s.shareStats}>
-                            <Text style={s.shareStat}>Duração <Text style={s.shareVal}>{Math.round(elapsed / 60)} min</Text></Text>
-                            <Text style={s.shareStat}>Onda <Text style={s.shareVal}>{FREQS[freqKey].name} {FREQS[freqKey].hz}Hz</Text></Text>
-                            <Text style={s.shareStat}>Ambiente <Text style={s.shareVal}>{AMBIENTS[ambKey].name}</Text></Text>
-                        </View>
-                        <TouchableOpacity style={s.btnPrimary} onPress={resetTimer}>
-                            <Text style={s.btnPrimaryTx}>Nova sessão</Text>
+                    <View style={styles.shareCard}>
+                        <Text style={styles.shareTitle}>Sessão concluída</Text>
+                        <TouchableOpacity style={styles.btnPrimary} onPress={resetTimer}>
+                            <Text style={styles.btnPrimaryTx}>Nova Sessão</Text>
                         </TouchableOpacity>
                     </View>
                 )}
-
             </ScrollView>
         </View>
     );
 }
 
-// ── STYLES ─────────────────────────────────────────────────────────
-const { width } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
     root: { flex: 1, backgroundColor: THEME.bg },
+    zenRoot: { flex: 1, backgroundColor: THEME.bg, alignItems: 'center', justifyContent: 'center', gap: 20 },
+
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 0.5, borderBottomColor: THEME.border },
     logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     logoDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: THEME.primary },
-    logoText: { color: THEME.text, fontSize: 15, fontWeight: '500', letterSpacing: 0.4 },
-    syncPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#0D1425', borderWidth: 0.5, borderColor: THEME.border, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-    syncDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.success },
-    syncTx: { color: THEME.muted, fontSize: 12 },
-    body: { padding: 16, paddingBottom: 40 },
-    audioBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: THEME.card, borderWidth: 0.5, borderColor: THEME.border, borderRadius: 10, padding: 10, marginBottom: 4 },
-    audioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#1E2D45' },
-    audioDotOn: { backgroundColor: THEME.success },
-    audioTx: { color: THEME.muted, fontSize: 12, flex: 1 },
-    audioTxOn: { color: THEME.text },
-    timerBlock: { alignItems: 'center', paddingVertical: 20 },
-    timerDisplay: { color: THEME.primary, fontSize: 60, fontWeight: '300', letterSpacing: -2, fontVariant: ['tabular-nums'] },
-    timerLabel: { color: THEME.muted, fontSize: 12, marginTop: 4 },
-    timerCtrl: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
-    btnPrimary: { backgroundColor: THEME.primary, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 },
-    btnPrimaryTx: { color: '#0A0F1C', fontWeight: '700', fontSize: 14 },
-    btnGhost: { borderWidth: 0.5, borderColor: THEME.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
-    btnGhostTx: { color: THEME.muted, fontSize: 13 },
-    sectionLabel: { color: THEME.muted, fontSize: 11, letterSpacing: 1, marginBottom: 8, marginTop: 4 },
-    freqGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-    freqCard: { width: (width - 48) / 2, backgroundColor: THEME.card, borderWidth: 0.5, borderColor: THEME.border, borderRadius: 10, padding: 12 },
-    freqCardOn: { borderColor: THEME.primary },
-    freqTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
-    freqName: { color: THEME.text, fontWeight: '500', fontSize: 13 },
-    freqHz: { color: THEME.muted, fontSize: 11 },
-    freqDesc: { color: THEME.muted, fontSize: 11 },
-    freqDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: THEME.border },
-    freqDotOn: { backgroundColor: THEME.primary },
-    sliderBlock: { marginBottom: 14 },
-    sliderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 7 },
-    sliderLabel: { color: THEME.muted, fontSize: 12, width: 66 },
+    logoText: { color: THEME.text, fontSize: 17, fontWeight: '600' },
+    syncPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: THEME.surface, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
+    syncDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: THEME.primary },
+    syncTx: { color: THEME.muted, fontSize: 13 },
+
+    body: { padding: 16, paddingBottom: 100 },
+    timerBlock: { alignItems: 'center', paddingVertical: 30 },
+    timerDisplay: { color: THEME.primary, fontSize: 88, fontWeight: '300', letterSpacing: -5 },
+    timerFreq: { color: THEME.accent, fontSize: 16, marginTop: 8, marginBottom: 4 },
+    timerCtrl: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
+
+    zenTimer: { color: THEME.primary, fontSize: 110, fontWeight: '300', letterSpacing: -7 },
+    zenSub: { color: THEME.accent, fontSize: 17.5 },
+
+    sectionLabel: { color: THEME.muted, fontSize: 12, letterSpacing: 1, marginTop: 20, marginBottom: 10 },
+    freqGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    freqCard: { width: '48%', backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.border, borderRadius: 12, padding: 14 },
+    freqCardOn: { borderColor: THEME.primary, shadowColor: THEME.primary, shadowOpacity: 0.5, shadowRadius: 12, elevation: 8 },
+    freqName: { color: THEME.text, fontWeight: '600', fontSize: 15 },
+    freqHz: { color: THEME.primary, fontSize: 13 },
+    freqDesc: { color: THEME.muted, fontSize: 12, marginTop: 4 },
+
+    ambientGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    ambBtn: { backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
+    ambBtnOn: { backgroundColor: 'rgba(167,139,250,0.2)', borderColor: THEME.accent },
+    ambTx: { color: THEME.muted, fontSize: 13 },
+    ambTxOn: { color: THEME.text, fontWeight: '500' },
+
+    btnPrimary: { backgroundColor: THEME.primary, borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14, marginTop: 10 },
+    btnPrimaryTx: { color: '#0A0F1C', fontWeight: '700' },
+    btnGhost: { borderWidth: 1, borderColor: THEME.border, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12 },
+    btnGhostTx: { color: THEME.muted },
+
+    zenBtn: { backgroundColor: 'rgba(167,139,250,0.1)', borderWidth: 1, borderColor: THEME.accent, borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 20 },
+    zenBtnTx: { color: THEME.accent, fontWeight: '500' },
+
+    aboutBtn: { borderWidth: 1, borderColor: THEME.accent, borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 10 },
+    aboutBtnTx: { color: THEME.accent, fontWeight: '500' },
+
+    sliderBlock: { marginVertical: 12 },
+    sliderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+    sliderLabel: { color: THEME.muted, fontSize: 12, width: 68 },
     sliderVal: { color: THEME.text, fontSize: 12, width: 36, textAlign: 'right' },
-    ambientGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 16 },
-    ambBtn: { backgroundColor: THEME.card, borderWidth: 0.5, borderColor: THEME.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
-    ambBtnOn: { backgroundColor: 'rgba(167,139,250,0.12)', borderColor: THEME.accent },
-    ambTx: { color: THEME.muted, fontSize: 12 },
-    ambTxOn: { color: THEME.text },
-    zenBtn: { backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 0.5, borderColor: THEME.border, borderRadius: 10, padding: 11, alignItems: 'center', marginBottom: 14 },
-    zenBtnTx: { color: THEME.muted, fontSize: 13 },
-    aboutBtn: { backgroundColor: 'transparent', borderWidth: 1, borderColor: THEME.accent, borderRadius: 10, padding: 11, alignItems: 'center', marginBottom: 16 },
-    aboutBtnTx: { color: THEME.accent, fontSize: 13, fontWeight: '500' },
-    shareCard: { backgroundColor: THEME.card, borderWidth: 0.5, borderColor: THEME.border, borderRadius: 12, padding: 14, gap: 10 },
-    shareTitle: { color: THEME.text, fontWeight: '500', fontSize: 13 },
-    shareStats: { flexDirection: 'row', gap: 14 },
-    shareStat: { color: THEME.muted, fontSize: 11 },
-    shareVal: { color: THEME.primary, fontWeight: '500' },
-    zenRoot: { flex: 1, backgroundColor: THEME.bg, alignItems: 'center', justifyContent: 'center', gap: 10 },
-    zenTimer: { color: THEME.text, fontSize: 72, fontWeight: '500', letterSpacing: -3, fontVariant: ['tabular-nums'] },
-    zenSub: { color: THEME.muted, fontSize: 13, marginBottom: 26 },
+
+    shareCard: { backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.border, borderRadius: 14, padding: 20, alignItems: 'center', gap: 12, marginTop: 16 },
+    shareTitle: { color: THEME.text, fontWeight: '600', fontSize: 15 },
 });
