@@ -9,6 +9,7 @@ import {
     ScrollView,
     Platform,
     Dimensions,
+    Image,
 } from 'react-native';
 
 // ── Tipos ─────────────────────────────────────────────────────────
@@ -59,10 +60,14 @@ export default function App() {
     const [syncCount, setSyncCount] = useState(2847);
     const [audioOn, setAudioOn] = useState(false);
     const [showPix, setShowPix] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    const PIX_PAYLOAD = '00020101021126580014br.gov.bcb.pix0136650bbde7-3708-4da9-8cc5-54121b47a2235204000053039865802BR5920HIGOR DE J FRANCISCO6011LARANJEIRAS62070503***6304F261';
 
     const copyPix = async () => {
-        await Clipboard.setStringAsync('00020101021126580014br.gov.bcb.pix0136650bbde7-3708-4da9-8cc5-54121b47a2235204000053039865802BR5920HIGOR DE J FRANCISCO6011LARANJEIRAS62070503***6304F261');
-        alert('Código Pix copiado com sucesso! Muito obrigado pelo apoio ❤️');
+        await Clipboard.setStringAsync(PIX_PAYLOAD);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 3000);
     };
 
     // Web Audio (web only)
@@ -316,8 +321,14 @@ export default function App() {
                         <View style={s.pixCard}>
                             <Text style={s.pixTitle}>Um gesto de apoio</Text>
                             <Text style={s.pixDesc}>O KiraWave é um projeto feito com carinho para ajudar no seu foco. Se esta ferramenta fez diferença no seu dia, considere apoiar o desenvolvimento com uma contribuição voluntária.</Text>
-                            <TouchableOpacity style={s.btnPrimary} onPress={copyPix}>
-                                <Text style={s.btnPrimaryTx}>Copiar Pix (Copia e Cola)</Text>
+                            
+                            <Image 
+                                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(PIX_PAYLOAD)}` }}
+                                style={s.qrCode}
+                            />
+
+                            <TouchableOpacity style={[s.btnPrimary, copied && s.btnSuccess]} onPress={copyPix}>
+                                <Text style={s.btnPrimaryTx}>{copied ? '✅ Chave Copiada!' : 'Copiar Pix (Copia e Cola)'}</Text>
                             </TouchableOpacity>
                             <Text style={s.pixSub}>Higor de Jesus Francisco</Text>
                         </View>
@@ -397,6 +408,8 @@ const styles = StyleSheet.create({
     pixCard: { backgroundColor: THEME.card, borderWidth: 0.5, borderColor: THEME.border, borderRadius: 12, padding: 18, marginTop: 10, alignItems: 'center', gap: 12 },
     pixTitle: { color: THEME.text, fontWeight: '600', fontSize: 15 },
     pixDesc: { color: THEME.muted, fontSize: 13, textAlign: 'center', lineHeight: 20 },
+    qrCode: { width: 140, height: 140, borderRadius: 8, marginTop: 4, marginBottom: 4 },
+    btnSuccess: { backgroundColor: THEME.success },
     pixSub: { color: THEME.muted, fontSize: 11, marginTop: 2 },
     shareCard: { backgroundColor: THEME.card, borderWidth: 0.5, borderColor: THEME.border, borderRadius: 12, padding: 14, gap: 10 },
     shareTitle: { color: THEME.text, fontWeight: '500', fontSize: 13 },
