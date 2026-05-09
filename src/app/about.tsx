@@ -1,9 +1,10 @@
-// src/app/about.tsx — migrado de app/about.tsx
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../../services/themes/tokens';
 
 const PIX_PAYLOAD =
@@ -11,6 +12,7 @@ const PIX_PAYLOAD =
 
 export default function AboutScreen() {
     const [copied, setCopied] = useState(false);
+    const router = useRouter();
 
     const copyPix = async () => {
         await Clipboard.setStringAsync(PIX_PAYLOAD);
@@ -21,98 +23,218 @@ export default function AboutScreen() {
     return (
         <View style={s.root}>
             <StatusBar style="light" />
+
+            {/* Background fixo para manter a imersão */}
+            <LinearGradient
+                colors={['#0F172A', '#020617', '#1E1B4B']}
+                style={StyleSheet.absoluteFill}
+            />
+
+            {/* Header */}
+            <View style={s.header}>
+                <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+                    <Ionicons name="chevron-back" size={24} color={THEME.text} />
+                </TouchableOpacity>
+                <Text style={s.headerTitle}>Sobre o Projeto</Text>
+                <View style={{ width: 40 }} />
+            </View>
+
             <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
 
-                <View style={s.section}>
-                    <Text style={s.sectionTag}>A ESSÊNCIA</Text>
-                    <Text style={s.headline}>
-                        "Um espaço sonoro projetado para você entrar em estado de fluxo."
+                {/* Manifesto Section */}
+                <View style={s.manifestoCard}>
+                    <View style={s.iconCircle}>
+                        <Ionicons name="flash" size={32} color={THEME.primary} />
+                    </View>
+                    <Text style={s.manifestoTitle}>Nossa Missão</Text>
+                    <Text style={s.manifestoText}>
+                        O <Text style={{ color: THEME.primary, fontWeight: '700' }}>KiraWave</Text> foi criado para ser o seu santuário digital.
+                        Acreditamos que o foco não é apenas produtividade, mas sim uma forma de paz mental.
                     </Text>
-                    <Text style={s.paragraph}>
-                        O <Text style={s.highlight}>KiraWave</Text> nasceu do desejo de ajudar pessoas
-                        a encontrarem foco profundo num mundo cheio de distrações. Com batidas binaurais
-                        e sons ambientes, ele ajuda cérebros neurodivergentes — como no TDAH — e qualquer
-                        pessoa que busque fluir melhor em suas tarefas e estudos.
+                    <Text style={s.manifestoSub}>
+                        Especialmente desenhado para mentes que buscam silenciar o ruído externo e fluir em seus objetivos.
                     </Text>
                 </View>
 
-                <View style={s.divider} />
-
+                {/* Roadmap Section */}
                 <View style={s.section}>
-                    <Text style={s.sectionTag}>O QUE VEM POR AÍ</Text>
-                    <View style={s.roadmapCard}>
+                    <View style={s.sectionHeader}>
+                        <Ionicons name="map-outline" size={20} color={THEME.primary} />
+                        <Text style={s.sectionTitle}>ROADMAP 2026</Text>
+                    </View>
+
+                    <View style={s.roadmapList}>
                         {[
-                            { icon: '✨', text: 'Temas premium e imersivos' },
-                            { icon: '🚫', text: 'Experiência 100% livre de anúncios, sempre' },
-                            { icon: '🍏', text: 'Lançamento na Apple App Store' },
-                            { icon: '🤖', text: 'Lançamento na Google Play Store' },
-                            { icon: '🪟', text: 'Lançamento na Microsoft Store' },
-                        ].map((item, index, arr) => (
-                            <View key={item.icon}>
-                                <View style={s.roadItem}>
-                                    <Text style={s.roadIcon}>{item.icon}</Text>
-                                    <Text style={s.roadText}>{item.text}</Text>
+                            { icon: 'color-palette', text: 'Temas Imersivos (Nebulosa, Oceano)', status: 'Próximo' },
+                            { icon: 'stats-chart', text: 'Histórico de Foco com Gráficos', status: 'Em breve' },
+                            { icon: 'logo-apple', text: 'App Nativo iOS & macOS', status: 'Desenvolvimento' },
+                            { icon: 'logo-android', text: 'App Nativo Android', status: 'Planejamento' },
+                        ].map((item, i) => (
+                            <View key={i} style={s.roadItem}>
+                                <View style={s.roadIconContainer}>
+                                    <Ionicons name={item.icon as any} size={20} color={THEME.text} />
                                 </View>
-                                {index < arr.length - 1 && <View style={s.roadDivider} />}
+                                <View style={s.roadContent}>
+                                    <Text style={s.roadText}>{item.text}</Text>
+                                    <Text style={s.roadStatus}>{item.status}</Text>
+                                </View>
                             </View>
                         ))}
                     </View>
                 </View>
 
-                <View style={s.divider} />
-
-                <View style={s.section}>
-                    <Text style={[s.sectionTag, { color: THEME.accent }]}>❤️ APOIE ESTE PROJETO</Text>
-                    <View style={s.pixCard}>
-                        <Text style={s.pixTitle}>Um gesto de apoio</Text>
-                        <Text style={s.pixDesc}>
-                            Se o KiraWave fez diferença no seu foco, considere contribuir voluntariamente
-                            para que o projeto continue crescendo e chegando a mais pessoas.
-                        </Text>
-                        <Image
-                            source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=000000&bgcolor=ffffff&data=${encodeURIComponent(PIX_PAYLOAD)}` }}
-                            style={s.qrCode}
-                        />
-                        <TouchableOpacity style={s.btnGradientWrapper} onPress={copyPix} activeOpacity={0.85}>
-                            <LinearGradient
-                                colors={copied ? ['#22D3EE', '#22D3EE'] : ['#7C3AED', '#22D3EE']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={s.btnGradient}
-                            >
-                                <Text style={s.btnGradientTx}>
-                                    {copied ? '✅ Chave Copiada!' : '📋 Copiar Chave Pix'}
-                                </Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                        <Text style={s.pixSub}>Higor de Jesus Francisco</Text>
+                {/* Donation Section */}
+                <View style={s.donationCard}>
+                    <LinearGradient
+                        colors={['rgba(124, 58, 237, 0.2)', 'rgba(34, 211, 238, 0.1)']}
+                        style={StyleSheet.absoluteFill}
+                    />
+                    <View style={s.donationHeader}>
+                        <Ionicons name="heart" size={28} color="#FB7185" />
+                        <Text style={s.donationTitle}>Apoie a Evolução</Text>
                     </View>
+
+                    <Text style={s.donationDesc}>
+                        O KiraWave é e sempre será <Text style={{ fontWeight: '700' }}>livre de anúncios</Text>.
+                        Seu apoio voluntário ajuda a custear os servidores e o tempo de desenvolvimento desta ferramenta.
+                    </Text>
+
+                    <View style={s.qrArea}>
+                        <View style={s.qrWrapper}>
+                            <Image
+                                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(PIX_PAYLOAD)}` }}
+                                style={s.qrCode}
+                            />
+                        </View>
+                        <View style={s.qrInstruction}>
+                            <Text style={s.qrStep}>1. Escaneie o QR Code</Text>
+                            <Text style={s.qrStep}>2. Ou copie a chave abaixo</Text>
+                        </View>
+                    </View>
+
+                    <TouchableOpacity style={s.copyBtn} onPress={copyPix} activeOpacity={0.8}>
+                        <LinearGradient
+                            colors={copied ? ['#10B981', '#059669'] : [THEME.primary, '#0891B2']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={s.copyBtnGradient}
+                        >
+                            <Ionicons name={copied ? "checkmark-circle" : "copy-outline"} size={20} color="white" />
+                            <Text style={s.copyBtnText}>
+                                {copied ? 'Copiado com Sucesso!' : 'Copiar Chave PIX'}
+                            </Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+
+                    <Text style={s.pixOwner}>Favorecido: Higor de J. Francisco</Text>
                 </View>
+
+                <Text style={s.footer}>KiraWave Beta • Feito com ❤️ para você.</Text>
             </ScrollView>
         </View>
     );
 }
 
 const s = StyleSheet.create({
-    root: { flex: 1, backgroundColor: THEME.bg },
-    body: { padding: 24, paddingBottom: 48 },
-    section: { marginBottom: 8 },
-    sectionTag: { color: THEME.primary, fontSize: 11, fontWeight: '600', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14, opacity: 0.8 },
-    headline: { color: THEME.text, fontSize: 20, fontWeight: '300', lineHeight: 30, fontStyle: 'italic', marginBottom: 16 },
-    paragraph: { color: THEME.muted, fontSize: 15, lineHeight: 24 },
-    highlight: { color: THEME.primary, fontWeight: '600' },
-    divider: { height: 1, backgroundColor: THEME.border, opacity: 0.5, marginVertical: 28 },
-    roadmapCard: { backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 8 },
-    roadItem: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
-    roadIcon: { fontSize: 18, width: 26, textAlign: 'center' },
-    roadText: { color: THEME.text, fontSize: 15, flex: 1, fontWeight: '300' },
-    roadDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)' },
-    pixCard: { backgroundColor: 'rgba(167,139,250,0.05)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.3)', borderRadius: 20, padding: 24, alignItems: 'center', gap: 16 },
-    pixTitle: { color: THEME.text, fontWeight: '600', fontSize: 18 },
-    pixDesc: { color: THEME.muted, fontSize: 14, textAlign: 'center', lineHeight: 22 },
-    qrCode: { width: 150, height: 150, borderRadius: 12, marginVertical: 4 },
-    btnGradientWrapper: { width: '100%', borderRadius: 14, overflow: 'hidden' },
-    btnGradient: { paddingVertical: 14, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center' },
-    btnGradientTx: { color: '#fff', fontWeight: '700', fontSize: 15 },
-    pixSub: { color: THEME.muted, fontSize: 12 },
+    root: { flex: 1, backgroundColor: '#020617' },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        paddingBottom: 20,
+        backgroundColor: 'rgba(2, 6, 23, 0.8)',
+        zIndex: 10,
+    },
+    backBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerTitle: { color: 'white', fontSize: 18, fontWeight: '700' },
+
+    body: { padding: 20, paddingBottom: 60 },
+
+    manifestoCard: {
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: 30,
+        padding: 30,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        alignItems: 'center',
+        marginBottom: 30,
+    },
+    iconCircle: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: 'rgba(34, 211, 238, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 20,
+    },
+    manifestoTitle: { color: 'white', fontSize: 22, fontWeight: '800', marginBottom: 12 },
+    manifestoText: { color: 'rgba(255, 255, 255, 0.8)', fontSize: 16, textAlign: 'center', lineHeight: 26, marginBottom: 16 },
+    manifestoSub: { color: 'rgba(255, 255, 255, 0.4)', fontSize: 13, textAlign: 'center', fontStyle: 'italic' },
+
+    section: { marginBottom: 30 },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20, paddingLeft: 10 },
+    sectionTitle: { color: THEME.primary, fontSize: 13, fontWeight: '800', letterSpacing: 2 },
+
+    roadmapList: { gap: 12 },
+    roadItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.02)',
+        borderRadius: 20,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    roadIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    roadContent: { flex: 1 },
+    roadText: { color: 'white', fontSize: 15, fontWeight: '600' },
+    roadStatus: { color: THEME.muted, fontSize: 12, marginTop: 2 },
+
+    donationCard: {
+        borderRadius: 32,
+        padding: 30,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(124, 58, 237, 0.3)',
+        alignItems: 'center',
+    },
+    donationHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+    donationTitle: { color: 'white', fontSize: 24, fontWeight: '800' },
+    donationDesc: { color: 'rgba(255, 255, 255, 0.7)', fontSize: 15, textAlign: 'center', lineHeight: 24, marginBottom: 24 },
+
+    qrArea: { flexDirection: 'row', alignItems: 'center', gap: 20, marginBottom: 24 },
+    qrWrapper: {
+        padding: 12,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        boxShadow: '0px 10px 30px rgba(0, 0, 0, 0.5)',
+    },
+    qrCode: { width: 140, height: 140 },
+    qrInstruction: { flex: 1, gap: 8 },
+    qrStep: { color: 'white', fontSize: 14, fontWeight: '500' },
+
+    copyBtn: { width: '100%', height: 60, borderRadius: 18, overflow: 'hidden' },
+    copyBtnGradient: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+    copyBtnText: { color: 'white', fontWeight: '800', fontSize: 16 },
+    pixOwner: { color: 'rgba(255, 255, 255, 0.4)', fontSize: 12, marginTop: 16 },
+
+    footer: { color: 'rgba(255, 255, 255, 0.2)', fontSize: 12, textAlign: 'center', marginTop: 20, marginBottom: 40 },
 });

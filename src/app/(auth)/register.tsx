@@ -49,8 +49,7 @@ export default function RegisterScreen() {
             <StatusBar style="light" />
             <LinearGradient
                 colors={['#0F172A', '#020617']}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
+                style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
             />
 
             <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
@@ -74,7 +73,7 @@ export default function RegisterScreen() {
 
                 {/* Premium Form Card */}
                 <View style={s.card}>
-                    <View style={s.glassOverlay} pointerEvents="none" />
+                    <View style={[s.glassOverlay, { pointerEvents: 'none' }]} />
                     
                     <Text style={s.title}>Criar Conta</Text>
                     <Text style={s.subtitle}>Dados fictícios são aceitos no momento</Text>
@@ -183,10 +182,7 @@ const s = StyleSheet.create({
         marginBottom: 32 
     },
     logoContainer: {
-        shadowColor: THEME.primary,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 15,
+        boxShadow: '0px 0px 15px rgba(34, 211, 238, 0.5)',
         elevation: 10,
     },
     logoDot: { 

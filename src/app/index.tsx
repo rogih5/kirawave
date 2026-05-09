@@ -6,6 +6,8 @@ import {
     StyleSheet, Text, View, TouchableOpacity,
     ScrollView, Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AmbientBackground from './components/AmbientBackground';
 import { useAudio } from '../features/audio/useAudio';
 import { useSessionStore } from '../store/useSessionStore';
@@ -22,7 +24,7 @@ export default function MainScreen() {
         useSessionStore();
     const { freqKey, ambKey, bVol, aVol, audioOn, bootAudio, suspendAudio, handleFreq, handleAmb, handleBVol, handleAVol } =
         useAudio();
-    const { syncCount, tickSyncCount } = useUserStore();
+    const { uid, setUser, syncCount, tickSyncCount } = useUserStore();
     const router = useRouter();
     const { presets, activePresetId, applyPreset } = usePresetsStore();
     const [zenMode, setZenMode] = useState(false);
@@ -30,6 +32,7 @@ export default function MainScreen() {
     const userLogout = async () => {
         try {
             await AsyncStorage.removeItem('isLoggedIn');
+            setUser(null); // Limpa o estado global (Zustand)
             router.replace('/login');
         } catch (e) {
             console.error('Erro ao sair:', e);
@@ -87,16 +90,32 @@ export default function MainScreen() {
         return (
             <View style={s.zenRoot}>
                 <StatusBar style="light" />
-                <View style={[StyleSheet.absoluteFill, { zIndex: -1 }]} pointerEvents="none">
-                    <AmbientBackground ambKey={ambKey} intensity={aVol / 85} />
+                
+                {/* Background Imersivo */}
+                <View style={[StyleSheet.absoluteFill, { zIndex: -1, pointerEvents: 'none' }]}>
+                    <AmbientBackground ambKey={ambKey} intensity={aVol / 70} />
                 </View>
-                <Text style={s.zenTimer}>{fmt(rem)}</Text>
-                <Text style={s.zenSub}>
-                    {FREQS[freqKey].name} {FREQS[freqKey].hz}Hz • {AMBIENTS[ambKey].name}
-                </Text>
-                <TouchableOpacity style={s.btnGhost} onPress={() => setZenMode(false)}>
-                    <Text style={s.btnGhostTx}>Sair do Modo Zen</Text>
+
+                {/* Botão de Fechar Sutil */}
+                <TouchableOpacity 
+                    style={s.zenCloseBtn} 
+                    onPress={() => setZenMode(false)}
+                    activeOpacity={0.6}
+                >
+                    <Ionicons name="close-outline" size={32} color="rgba(255,255,255,0.3)" />
                 </TouchableOpacity>
+
+                {/* Conteúdo Central */}
+                <View style={s.zenContent}>
+                    <Text style={s.zenTimer}>{fmt(rem)}</Text>
+                    <View style={s.zenDivider} />
+                    <Text style={s.zenSub}>
+                        {FREQS[freqKey].name.toUpperCase()} • {AMBIENTS[ambKey].name.toUpperCase()}
+                    </Text>
+                </View>
+
+                {/* Dica de Respiração */}
+                <Text style={s.zenQuote}>Mantenha o foco, respire fundo.</Text>
             </View>
         );
     }
@@ -105,7 +124,7 @@ export default function MainScreen() {
         <View style={s.root}>
             <StatusBar style="light" />
             
-            <View style={[StyleSheet.absoluteFill, { zIndex: -1 }]} pointerEvents="none">
+            <View style={[StyleSheet.absoluteFill, { zIndex: -1, pointerEvents: 'none' }]}>
                 <AmbientBackground ambKey={ambKey} intensity={aVol / 100} />
             </View>
 
@@ -130,22 +149,32 @@ export default function MainScreen() {
                 contentContainerStyle={s.body} 
                 showsVerticalScrollIndicator={false}
             >
-                <View style={s.timerBlock}>
+            <View style={s.timerBlock}>
                     <Text style={s.timerDisplay}>{fmt(rem)}</Text>
                     <Text style={s.timerFreq}>
                         {FREQS[freqKey].name} {FREQS[freqKey].hz}Hz • {AMBIENTS[ambKey].name}
                     </Text>
                     <View style={s.timerCtrl}>
-                        <TouchableOpacity style={s.btnGhost} onPress={resetTimer}>
-                            <Text style={s.btnGhostTx}>↺</Text>
+                        <TouchableOpacity style={s.btnGhost} onPress={resetTimer} activeOpacity={0.7}>
+                            <Ionicons name="refresh-outline" size={24} color="white" />
                         </TouchableOpacity>
-                        <TouchableOpacity style={s.btnPrimary} onPress={toggleTimer}>
-                            <Text style={s.btnPrimaryTx}>
-                                {running ? '⏸ Pausar' : '▶ Iniciar'}
-                            </Text>
+                        
+                        <TouchableOpacity style={s.btnPrimary} onPress={toggleTimer} activeOpacity={0.9}>
+                            <LinearGradient
+                                colors={running ? ['#FB7185', '#E11D48'] : [THEME.primary, '#0891B2']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={s.btnPrimaryGradient}
+                            >
+                                <Ionicons name={running ? "pause" : "play"} size={24} color="white" style={{ marginRight: 10 }} />
+                                <Text style={s.btnPrimaryTx}>
+                                    {running ? 'Pausar' : 'Iniciar Foco'}
+                                </Text>
+                            </LinearGradient>
                         </TouchableOpacity>
-                        <TouchableOpacity style={s.btnGhost} onPress={skipTimer}>
-                            <Text style={s.btnGhostTx}>⏭</Text>
+
+                        <TouchableOpacity style={s.btnGhost} onPress={skipTimer} activeOpacity={0.7}>
+                            <Ionicons name="play-skip-forward-outline" size={24} color="white" />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -227,8 +256,20 @@ export default function MainScreen() {
                 </TouchableOpacity>
 
                 <Link href="/about" asChild>
-                    <TouchableOpacity style={s.aboutBtn}>
-                        <Text style={s.aboutBtnTx}>✨ Roadmap & Apoio via Pix</Text>
+                    <TouchableOpacity style={s.premiumCardBtn} activeOpacity={0.9}>
+                        <LinearGradient
+                            colors={['rgba(167, 139, 250, 0.15)', 'rgba(34, 211, 238, 0.1)']}
+                            style={s.premiumCardGradient}
+                        >
+                            <View style={s.premiumCardInfo}>
+                                <Ionicons name="sparkles" size={20} color={THEME.accent} />
+                                <View>
+                                    <Text style={s.premiumCardTitle}>KiraWave em Evolução</Text>
+                                    <Text style={s.premiumCardSub}>Veja o Roadmap e Apoie o Projeto</Text>
+                                </View>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color={THEME.muted} />
+                        </LinearGradient>
                     </TouchableOpacity>
                 </Link>
             </ScrollView>
@@ -238,65 +279,99 @@ export default function MainScreen() {
 
 const s = StyleSheet.create({
     root: { flex: 1, backgroundColor: THEME.bg },
-    zenRoot: { flex: 1, backgroundColor: THEME.bg, alignItems: 'center', justifyContent: 'center', gap: 20 },
+    zenRoot: { flex: 1, backgroundColor: '#020617', alignItems: 'center', justifyContent: 'center' },
+    zenCloseBtn: { position: 'absolute', top: 50, right: 30, width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
+    zenContent: { alignItems: 'center', justifyContent: 'center' },
+    zenTimer: { 
+        color: 'white', 
+        fontSize: 140, 
+        fontWeight: '100', 
+        letterSpacing: -10,
+        textShadow: '0px 0px 50px rgba(255, 255, 255, 0.2)'
+    },
+    zenDivider: { width: 40, height: 2, backgroundColor: THEME.primary, marginVertical: 20, opacity: 0.5 },
+    zenSub: { color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: '700', letterSpacing: 3 },
+    zenQuote: { position: 'absolute', bottom: 60, color: 'rgba(255,255,255,0.2)', fontSize: 13, fontStyle: 'italic', letterSpacing: 1 },
 
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 0.5, borderBottomColor: THEME.border, zIndex: 10 },
-    logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    logoDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: THEME.primary },
-    logoText: { color: THEME.text, fontSize: 17, fontWeight: '600' },
-    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    syncPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: THEME.surface, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
-    syncDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: THEME.primary },
-    syncTx: { color: THEME.muted, fontSize: 12 },
-    logoutBtn: { marginLeft: 8, padding: 4 },
-    logoutTx: { color: '#FB7185', fontSize: 12, fontWeight: '600' },
+    header: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        paddingHorizontal: 20,
+        paddingTop: Platform.OS === 'ios' ? 50 : 20,
+        paddingBottom: 15,
+        backgroundColor: 'rgba(10, 15, 28, 0.7)',
+        backdropFilter: 'blur(10px)', // Efeito de vidro na Web
+        borderBottomWidth: 1, 
+        borderBottomColor: 'rgba(255,255,255,0.05)',
+        zIndex: 100 
+    },
+    logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    logoDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: THEME.primary, boxShadow: '0px 0px 10px #22D3EE' },
+    logoText: { color: THEME.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.5 },
+    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    syncPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(34, 211, 238, 0.1)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(34, 211, 238, 0.2)' },
+    syncDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.primary },
+    syncTx: { color: THEME.primary, fontSize: 11, fontWeight: '700' },
+    logoutBtn: { backgroundColor: 'rgba(251, 113, 133, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+    logoutTx: { color: '#FB7185', fontSize: 11, fontWeight: '700' },
 
-    body: { padding: 16, paddingBottom: 100, zIndex: 1 },
-    timerBlock: { alignItems: 'center', paddingVertical: 30 },
-    timerDisplay: { color: THEME.primary, fontSize: 88, fontWeight: '300', letterSpacing: -5 },
-    timerFreq: { color: THEME.accent, fontSize: 15, marginTop: 8, marginBottom: 4 },
-    timerCtrl: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
-    zenTimer: { color: THEME.primary, fontSize: 110, fontWeight: '300', letterSpacing: -7 },
-    zenSub: { color: THEME.accent, fontSize: 17.5 },
+    body: { padding: 20, paddingBottom: 100 },
+    timerBlock: { alignItems: 'center', paddingVertical: 40, marginBottom: 20 },
+    timerDisplay: { 
+        color: 'white', 
+        fontSize: 100, 
+        fontWeight: '200', 
+        letterSpacing: -6,
+        textShadow: '0px 0px 30px rgba(34, 211, 238, 0.3)' 
+    },
+    timerFreq: { color: THEME.accent, fontSize: 14, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginTop: 10, opacity: 0.8 },
+    timerCtrl: { flexDirection: 'row', alignItems: 'center', gap: 20, marginTop: 30 },
+    
+    btnPrimary: { borderRadius: 20, overflow: 'hidden', boxShadow: '0px 10px 20px rgba(167, 139, 250, 0.3)' },
+    btnPrimaryGradient: { paddingHorizontal: 40, paddingVertical: 18, alignItems: 'center', justifyContent: 'center' },
+    btnPrimaryTx: { color: 'white', fontWeight: '800', fontSize: 18 },
+    
+    btnGhost: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.02)' },
+    btnGhostTx: { color: 'white', fontSize: 20 },
 
-    sectionLabel: { color: THEME.muted, fontSize: 12, letterSpacing: 1, marginTop: 20, marginBottom: 10 },
+    sectionLabel: { color: 'white', fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 30, marginBottom: 15, opacity: 0.5 },
 
-    presetsRow: { marginBottom: 4 },
-    presetChip: { backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.border, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, marginRight: 8, flexDirection: 'row', alignItems: 'center', gap: 6 },
-    presetChipOn: { borderColor: THEME.primary, backgroundColor: 'rgba(34,211,238,0.1)' },
-    presetIcon: { fontSize: 16 },
-    presetName: { color: THEME.muted, fontSize: 13 },
-    presetNameOn: { color: THEME.primary, fontWeight: '600' },
+    presetsRow: { marginBottom: 10 },
+    presetChip: { backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 25, paddingHorizontal: 18, paddingVertical: 12, marginRight: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+    presetChipOn: { borderColor: THEME.primary, backgroundColor: 'rgba(34,211,238,0.1)', boxShadow: '0px 0px 15px rgba(34, 211, 238, 0.2)' },
+    presetIcon: { fontSize: 18 },
+    presetName: { color: 'rgba(255,255,255,0.5)', fontSize: 14, fontWeight: '600' },
+    presetNameOn: { color: THEME.primary },
 
-    freqGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-    freqCard: { width: '48%', backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.border, borderRadius: 12, padding: 14 },
+    freqGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    freqCard: { width: '48.2%', backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 24, padding: 20 },
     freqCardOn: { 
         borderColor: THEME.primary, 
-        boxShadow: '0px 0px 12px rgba(34, 211, 238, 0.5)', // Novo padrão React 19
-        elevation: 8 
+        backgroundColor: 'rgba(34, 211, 238, 0.05)',
+        boxShadow: '0px 0px 20px rgba(34, 211, 238, 0.15)',
     },
-    freqName: { color: THEME.text, fontWeight: '600', fontSize: 15 },
-    freqHz: { color: THEME.primary, fontSize: 13 },
-    freqDesc: { color: THEME.muted, fontSize: 12, marginTop: 4 },
+    freqName: { color: 'white', fontWeight: '700', fontSize: 16 },
+    freqHz: { color: THEME.primary, fontSize: 13, fontWeight: '600', marginTop: 2 },
+    freqDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 8, lineHeight: 18 },
 
-    ambientGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    ambBtn: { backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
-    ambBtnOn: { backgroundColor: 'rgba(167,139,250,0.2)', borderColor: THEME.accent },
-    ambTx: { color: THEME.muted, fontSize: 13 },
-    ambTxOn: { color: THEME.text, fontWeight: '500' },
+    ambientGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    ambBtn: { backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 16, paddingHorizontal: 18, paddingVertical: 14 },
+    ambBtnOn: { backgroundColor: 'rgba(167,139,250,0.15)', borderColor: THEME.accent, boxShadow: '0px 0px 15px rgba(167, 139, 250, 0.2)' },
+    ambTx: { color: 'rgba(255,255,255,0.5)', fontSize: 14, fontWeight: '600' },
+    ambTxOn: { color: 'white' },
 
-    btnPrimary: { backgroundColor: THEME.primary, borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14, marginTop: 10 },
-    btnPrimaryTx: { color: '#0A0F1C', fontWeight: '700' },
-    btnGhost: { borderWidth: 1, borderColor: THEME.border, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12 },
-    btnGhostTx: { color: THEME.muted },
+    premiumCardBtn: { marginTop: 40, borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(167, 139, 250, 0.3)', boxShadow: '0px 15px 35px rgba(0,0,0,0.4)' },
+    premiumCardGradient: { padding: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    premiumCardInfo: { flexDirection: 'row', alignItems: 'center', gap: 18 },
+    premiumCardTitle: { color: 'white', fontSize: 18, fontWeight: '800' },
+    premiumCardSub: { color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 4 },
 
-    zenBtn: { backgroundColor: 'rgba(167,139,250,0.1)', borderWidth: 1, borderColor: THEME.accent, borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 20 },
-    zenBtnTx: { color: THEME.accent, fontWeight: '500' },
-    aboutBtn: { borderWidth: 1, borderColor: THEME.accent, borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 10 },
-    aboutBtnTx: { color: THEME.accent, fontWeight: '500' },
-
-    sliderBlock: { marginVertical: 12 },
-    sliderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-    sliderLabel: { color: THEME.muted, fontSize: 12, width: 68 },
-    sliderVal: { color: THEME.text, fontSize: 12, width: 36, textAlign: 'right' },
+    sliderBlock: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 24, padding: 20, marginVertical: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+    sliderRow: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 15 },
+    sliderLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '700', width: 80, textTransform: 'uppercase', letterSpacing: 1 },
+    sliderVal: { color: THEME.primary, fontSize: 14, fontWeight: '800', width: 45, textAlign: 'right' },
+    
+    zenBtn: { backgroundColor: 'rgba(167, 139, 250, 0.1)', borderWidth: 1, borderColor: 'rgba(167, 139, 250, 0.3)', borderRadius: 20, padding: 18, alignItems: 'center', marginTop: 10 },
+    zenBtnTx: { color: THEME.accent, fontWeight: '700', fontSize: 15 },
 });
