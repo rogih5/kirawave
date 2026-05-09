@@ -2,6 +2,11 @@
   "name": "kirawave",
   "version": "1.0.0",
   "main": "expo-router/entry",
+  "overrides": {
+    "react": "$react",
+    "react-dom": "$react-dom",
+    "@types/react": "~19.0.0"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
