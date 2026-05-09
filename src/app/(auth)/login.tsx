@@ -1,281 +1,123 @@
 // src/app/(auth)/login.tsx
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
-    View, Text, TextInput, TouchableOpacity,
-    StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    Alert,
+    StatusBar,
+    KeyboardAvoidingView,
+    Platform,
+    ActivityIndicator,
 } from 'react-native';
-import { Link } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { THEME } from '../../../services/themes/tokens';
-import { useUserStore } from '../../store/useUserStore';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function LoginScreen() {
+export default function Login() {
+    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const setUser = useUserStore(s => s.setUser);
 
     const handleLogin = async () => {
-        if (!email.trim() || !password.trim()) {
-            setError('Preencha e-mail e senha.');
-            return;
-        }
         setLoading(true);
-        setError(null);
 
-        // Simulação de login (Bypass Firebase)
-        setTimeout(() => {
-            setUser({
-                uid: 'mock-user-123',
-                email: email.trim(),
-                displayName: email.split('@')[0],
-            });
-            setLoading(false);
-        }, 1200);
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        await AsyncStorage.setItem('isLoggedIn', 'true');
+
+        // Redireciona para a tela principal (sem (tabs))
+        router.replace('/index');
+
+        setLoading(false);
     };
-
     return (
-        <KeyboardAvoidingView
-            style={s.root}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-            <StatusBar style="light" />
-            
+        <View style={{ flex: 1 }}>
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
             <LinearGradient
-                colors={['#0F172A', '#020617']}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
-            />
-
-            {/* Test Mode Badge */}
-            <View style={s.testBadge}>
-                <Text style={s.testBadgeTx}>MODO DE TESTE ATIVO</Text>
-            </View>
-
-            {/* Logo Area */}
-            <View style={s.logoArea}>
-                <View style={s.logoContainer}>
-                    <LinearGradient
-                        colors={[THEME.primary, '#06B6D4']}
-                        style={s.logoDot}
-                    />
-                </View>
-                <Text style={s.logoText}>KiraWave</Text>
-                <Text style={s.tagline}>Sua mente em alta performance</Text>
-            </View>
-
-            {/* Premium Form Card */}
-            <View style={s.card}>
-                <View style={s.glassOverlay} pointerEvents="none" />
-                
-                <Text style={s.title}>Bem-vindo</Text>
-                <Text style={s.subtitle}>Entre com qualquer dado para testar</Text>
-
-                <View style={s.inputContainer}>
-                    <Text style={s.inputLabel}>E-mail</Text>
-                    <TextInput
-                        style={s.input}
-                        placeholder="exemplo@kira.com"
-                        placeholderTextColor="rgba(255,255,255,0.3)"
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        value={email}
-                        onChangeText={setEmail}
-                    />
-                </View>
-
-                <View style={s.inputContainer}>
-                    <Text style={s.inputLabel}>Senha</Text>
-                    <TextInput
-                        style={s.input}
-                        placeholder="••••••••"
-                        placeholderTextColor="rgba(255,255,255,0.3)"
-                        secureTextEntry
-                        value={password}
-                        onChangeText={setPassword}
-                    />
-                </View>
-
-                {error && <Text style={s.errorText}>{error}</Text>}
-
-                <TouchableOpacity 
-                    style={s.btnPrimary} 
-                    onPress={handleLogin} 
-                    disabled={loading}
-                    activeOpacity={0.8}
+                colors={['#0a0a0a', '#1a0033', '#2a0055']}
+                style={{ flex: 1 }}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
                 >
-                    <LinearGradient
-                        colors={[THEME.primary, '#06B6D4']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={s.btnGradient}
-                    >
-                        {loading
-                            ? <ActivityIndicator color="#020617" />
-                            : <Text style={s.btnPrimaryTx}>Entrar Agora</Text>
-                        }
-                    </LinearGradient>
-                </TouchableOpacity>
+                    <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32 }}>
+                        {/* Logo */}
+                        <View style={{ alignItems: 'center', marginBottom: 48 }}>
+                            <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: 24, borderRadius: 24, marginBottom: 24 }}>
+                                <Ionicons name="pulse" size={72} color="#a855f7" />
+                            </View>
 
-                <Link href={'/(auth)/register' as any} asChild>
-                    <TouchableOpacity style={s.linkBtn}>
-                        <Text style={s.linkTx}>
-                            Ainda não tem conta? <Text style={s.linkHighlight}>Criar conta</Text>
+                            <Text style={{ fontSize: 48, fontWeight: 'bold', color: 'white', letterSpacing: -2 }}>
+                                KiraWave
+                            </Text>
+                            <Text style={{ color: '#d8b4fe', fontSize: 18, marginTop: 4 }}>frequência para sua mente</Text>
+                        </View>
+
+                        {/* Card */}
+                        <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: 32, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
+                            <Text style={{ color: 'white', fontSize: 24, fontWeight: '600', marginBottom: 32, textAlign: 'center' }}>
+                                Entre para começar
+                            </Text>
+
+                            <TextInput
+                                style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 16, color: 'white', fontSize: 16, marginBottom: 16 }}
+                                placeholder="Seu email"
+                                placeholderTextColor="#aaaaaa"
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                            />
+
+                            <TextInput
+                                style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 16, color: 'white', fontSize: 16, marginBottom: 32 }}
+                                placeholder="Senha"
+                                placeholderTextColor="#aaaaaa"
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry
+                            />
+
+                            <TouchableOpacity
+                                onPress={handleLogin}
+                                disabled={loading}
+                                style={{ backgroundColor: '#9333ea', paddingVertical: 16, borderRadius: 16 }}
+                                activeOpacity={0.7}
+                            >
+                                {loading ? (
+                                    <ActivityIndicator color="white" />
+                                ) : (
+                                    <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold', fontSize: 18 }}>
+                                        Entrar no KiraWave
+                                    </Text>
+                                )}
+                            </TouchableOpacity>
+
+                            {/* Aviso de Teste */}
+                            <View style={{ backgroundColor: 'rgba(234, 179, 8, 0.1)', borderWidth: 1, borderColor: 'rgba(234, 179, 8, 0.3)', padding: 16, borderRadius: 16, marginTop: 24 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                    <Ionicons name="sparkles" size={20} color="#eab308" />
+                                    <Text style={{ color: '#eab308', fontWeight: '500', marginLeft: 8 }}>Modo de Teste</Text>
+                                </View>
+                                <Text style={{ color: '#fde047', fontSize: 14 }}>
+                                    Estamos testando um novo sistema de autenticação.
+                                    Qualquer email e senha que você digitar irá funcionar.
+                                </Text>
+                            </View>
+                        </View>
+
+                        <Text style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', marginTop: 40, fontSize: 14 }}>
+                            Versão Alpha • Teste Interno
                         </Text>
-                    </TouchableOpacity>
-                </Link>
-            </View>
-
-            <Text style={s.footerNote}>
-                Recursos premium em desenvolvimento • v1.0.0
-            </Text>
-        </KeyboardAvoidingView>
+                    </View>
+                </KeyboardAvoidingView>
+            </LinearGradient>
+        </View>
     );
 }
-
-const s = StyleSheet.create({
-    root: { 
-        flex: 1, 
-        justifyContent: 'center', 
-        padding: 24,
-    },
-    testBadge: {
-        position: 'absolute',
-        top: 60,
-        alignSelf: 'center',
-        backgroundColor: 'rgba(34, 211, 238, 0.1)',
-        paddingHorizontal: 16,
-        paddingVertical: 6,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(34, 211, 238, 0.3)',
-    },
-    testBadgeTx: {
-        color: THEME.primary,
-        fontSize: 10,
-        fontWeight: '800',
-        letterSpacing: 1.2,
-    },
-    logoArea: { 
-        alignItems: 'center', 
-        marginBottom: 40 
-    },
-    logoContainer: {
-        shadowColor: THEME.primary,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 15,
-        elevation: 10,
-    },
-    logoDot: { 
-        width: 16, 
-        height: 16, 
-        borderRadius: 8, 
-        marginBottom: 16 
-    },
-    logoText: { 
-        color: '#FFFFFF', 
-        fontSize: 32, 
-        fontWeight: '800', 
-        letterSpacing: -1 
-    },
-    tagline: { 
-        color: 'rgba(255,255,255,0.5)', 
-        fontSize: 14, 
-        marginTop: 4,
-        fontWeight: '500'
-    },
-
-    card: {
-        backgroundColor: 'rgba(30, 41, 59, 0.5)',
-        borderRadius: 28,
-        padding: 28,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        overflow: 'hidden',
-    },
-    glassOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(15, 23, 42, 0.4)',
-    },
-    title: { 
-        color: '#FFFFFF', 
-        fontSize: 24, 
-        fontWeight: '700', 
-        marginBottom: 6 
-    },
-    subtitle: {
-        color: 'rgba(255,255,255,0.4)',
-        fontSize: 14,
-        marginBottom: 24,
-    },
-    inputContainer: {
-        marginBottom: 18,
-    },
-    inputLabel: {
-        color: 'rgba(255,255,255,0.6)',
-        fontSize: 12,
-        fontWeight: '600',
-        marginBottom: 8,
-        marginLeft: 4,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    input: {
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 16,
-        padding: 16,
-        color: '#FFFFFF',
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
-    },
-
-    errorText: { 
-        color: '#FB7185', 
-        fontSize: 13, 
-        textAlign: 'center',
-        marginBottom: 12 
-    },
-
-    btnPrimary: {
-        borderRadius: 16,
-        overflow: 'hidden',
-        marginTop: 10,
-        height: 56,
-    },
-    btnGradient: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    btnPrimaryTx: { 
-        color: '#020617', 
-        fontWeight: '800', 
-        fontSize: 16,
-        letterSpacing: 0.5
-    },
-
-    linkBtn: { 
-        alignItems: 'center', 
-        marginTop: 20 
-    },
-    linkTx: { 
-        color: 'rgba(255,255,255,0.4)', 
-        fontSize: 14 
-    },
-    linkHighlight: { 
-        color: THEME.primary, 
-        fontWeight: '700' 
-    },
-    footerNote: {
-        position: 'absolute',
-        bottom: 40,
-        alignSelf: 'center',
-        color: 'rgba(255,255,255,0.2)',
-        fontSize: 12,
-        fontWeight: '500',
-    }
-});

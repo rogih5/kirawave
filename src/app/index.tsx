@@ -1,8 +1,7 @@
-// src/app/index.tsx — Tela principal refatorada
-// Lógica de áudio e estado movida para hooks/stores; esta tela é apenas UI
 import { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     StyleSheet, Text, View, TouchableOpacity,
     ScrollView, Platform,
@@ -23,21 +22,29 @@ export default function MainScreen() {
         useSessionStore();
     const { freqKey, ambKey, bVol, aVol, audioOn, bootAudio, suspendAudio, handleFreq, handleAmb, handleBVol, handleAVol } =
         useAudio();
-    const { syncCount, tickSyncCount, displayName, logout: userLogout } = useUserStore();
+    const { syncCount, tickSyncCount } = useUserStore();
+    const router = useRouter();
     const { presets, activePresetId, applyPreset } = usePresetsStore();
     const [zenMode, setZenMode] = useState(false);
+
+    const userLogout = async () => {
+        try {
+            await AsyncStorage.removeItem('isLoggedIn');
+            router.replace('/login');
+        } catch (e) {
+            console.error('Erro ao sair:', e);
+        }
+    };
 
     const elapsedRef = useRef(elapsed);
     useEffect(() => { elapsedRef.current = elapsed; }, [elapsed]);
 
-    // Timer interval
     useEffect(() => {
         if (!running) return;
         const ivl = setInterval(tick, 1000);
         return () => clearInterval(ivl);
     }, [running, tick]);
 
-    // Salvar sessão ao concluir
     useEffect(() => {
         if (done && elapsedRef.current > 30) {
             addSession({
@@ -51,7 +58,6 @@ export default function MainScreen() {
         }
     }, [done]);
 
-    // Sync counter
     useEffect(() => {
         const t = setInterval(tickSyncCount, 6000);
         return () => clearInterval(t);
@@ -77,12 +83,13 @@ export default function MainScreen() {
         await suspendAudio();
     };
 
-    // Zen Mode
     if (zenMode) {
         return (
             <View style={s.zenRoot}>
                 <StatusBar style="light" />
-                <AmbientBackground ambKey={ambKey} intensity={aVol / 85} />
+                <View style={[StyleSheet.absoluteFill, { zIndex: -1 }]} pointerEvents="none">
+                    <AmbientBackground ambKey={ambKey} intensity={aVol / 85} />
+                </View>
                 <Text style={s.zenTimer}>{fmt(rem)}</Text>
                 <Text style={s.zenSub}>
                     {FREQS[freqKey].name} {FREQS[freqKey].hz}Hz • {AMBIENTS[ambKey].name}
@@ -97,11 +104,11 @@ export default function MainScreen() {
     return (
         <View style={s.root}>
             <StatusBar style="light" />
-            <View style={[StyleSheet.absoluteFill, { zIndex: -1000 }]}>
+            
+            <View style={[StyleSheet.absoluteFill, { zIndex: -1 }]} pointerEvents="none">
                 <AmbientBackground ambKey={ambKey} intensity={aVol / 100} />
             </View>
 
-            {/* Header */}
             <View style={s.header}>
                 <View style={s.logoRow}>
                     <View style={s.logoDot} />
@@ -118,9 +125,11 @@ export default function MainScreen() {
                 </View>
             </View>
 
-            <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
-
-                {/* Timer */}
+            <ScrollView 
+                style={{ flex: 1 }}
+                contentContainerStyle={s.body} 
+                showsVerticalScrollIndicator={false}
+            >
                 <View style={s.timerBlock}>
                     <Text style={s.timerDisplay}>{fmt(rem)}</Text>
                     <Text style={s.timerFreq}>
@@ -141,7 +150,6 @@ export default function MainScreen() {
                     </View>
                 </View>
 
-                {/* Presets */}
                 <Text style={s.sectionLabel}>PRESETS</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.presetsRow}>
                     {presets.map((p) => (
@@ -158,7 +166,6 @@ export default function MainScreen() {
                     ))}
                 </ScrollView>
 
-                {/* Frequências */}
                 <Text style={s.sectionLabel}>FREQUÊNCIA BINAURAL</Text>
                 <View style={s.freqGrid}>
                     {(Object.entries(FREQS) as [FreqKey, typeof FREQS[FreqKey]][]).map(([k, f]) => (
@@ -174,7 +181,6 @@ export default function MainScreen() {
                     ))}
                 </View>
 
-                {/* Volume sliders (web only) */}
                 {Platform.OS === 'web' && (
                     <View style={s.sliderBlock}>
                         <View style={s.sliderRow}>
@@ -198,7 +204,6 @@ export default function MainScreen() {
                     </View>
                 )}
 
-                {/* Ambientes */}
                 <Text style={s.sectionLabel}>SOM AMBIENTE</Text>
                 <View style={s.ambientGrid}>
                     {(Object.entries(AMBIENTS) as [AmbientKey, typeof AMBIENTS[AmbientKey]][]).map(([k, a]) => (
@@ -226,41 +231,6 @@ export default function MainScreen() {
                         <Text style={s.aboutBtnTx}>✨ Roadmap & Apoio via Pix</Text>
                     </TouchableOpacity>
                 </Link>
-
-                {/* Sessão concluída */}
-                {done && (
-                    <View style={s.shareCard}>
-                        <Text style={s.shareTitle}>🎯 Sessão concluída!</Text>
-                        <Text style={s.shareSub}>
-                            {fmt(elapsedRef.current)} · {FREQS[freqKey].name} {FREQS[freqKey].hz}Hz · {AMBIENTS[ambKey].name}
-                        </Text>
-                        <TouchableOpacity style={s.btnPrimary} onPress={resetTimer}>
-                            <Text style={s.btnPrimaryTx}>▶ Nova Sessão</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-
-                {/* Histórico */}
-                {sessions.length > 0 && (
-                    <View style={s.historyBlock}>
-                        <Text style={s.sectionLabel}>SESSÕES DE HOJE</Text>
-                        {sessions.map((session, i) => (
-                            <View key={session.id} style={s.historyItem}>
-                                <Text style={s.historyTime}>{fmt(session.duration)}</Text>
-                                <View style={s.historyMeta}>
-                                    <Text style={s.historyFreq}>{FREQS[session.freqKey].name} {FREQS[session.freqKey].hz}Hz</Text>
-                                    <Text style={s.historyAmb}>{AMBIENTS[session.ambKey].name}</Text>
-                                </View>
-                                <Text style={s.historyTs}>
-                                    {new Date(session.startedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                </Text>
-                            </View>
-                        ))}
-                        <Text style={s.historyTotal}>
-                            Total: {fmt(sessions.reduce((a, s) => a + s.duration, 0))}
-                        </Text>
-                    </View>
-                )}
             </ScrollView>
         </View>
     );
@@ -300,7 +270,11 @@ const s = StyleSheet.create({
 
     freqGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     freqCard: { width: '48%', backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.border, borderRadius: 12, padding: 14 },
-    freqCardOn: { borderColor: THEME.primary, shadowColor: THEME.primary, shadowOpacity: 0.5, shadowRadius: 12, elevation: 8 },
+    freqCardOn: { 
+        borderColor: THEME.primary, 
+        boxShadow: '0px 0px 12px rgba(34, 211, 238, 0.5)', // Novo padrão React 19
+        elevation: 8 
+    },
     freqName: { color: THEME.text, fontWeight: '600', fontSize: 15 },
     freqHz: { color: THEME.primary, fontSize: 13 },
     freqDesc: { color: THEME.muted, fontSize: 12, marginTop: 4 },
@@ -325,17 +299,4 @@ const s = StyleSheet.create({
     sliderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
     sliderLabel: { color: THEME.muted, fontSize: 12, width: 68 },
     sliderVal: { color: THEME.text, fontSize: 12, width: 36, textAlign: 'right' },
-
-    shareCard: { backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.primary, borderRadius: 14, padding: 20, alignItems: 'center', gap: 10, marginTop: 16 },
-    shareTitle: { color: THEME.text, fontWeight: '700', fontSize: 16 },
-    shareSub: { color: THEME.muted, fontSize: 13 },
-
-    historyBlock: { marginTop: 8, marginBottom: 20 },
-    historyItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: THEME.border },
-    historyTime: { color: THEME.primary, fontWeight: '700', fontSize: 15, width: 52 },
-    historyMeta: { flex: 1 },
-    historyFreq: { color: THEME.text, fontSize: 13, fontWeight: '500' },
-    historyAmb: { color: THEME.muted, fontSize: 11 },
-    historyTs: { color: THEME.muted, fontSize: 11 },
-    historyTotal: { color: THEME.accent, fontWeight: '600', fontSize: 13, textAlign: 'right', marginTop: 10 },
 });

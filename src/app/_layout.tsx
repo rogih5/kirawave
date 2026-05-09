@@ -1,55 +1,53 @@
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
-import { View, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, ActivityIndicator, StatusBar } from 'react-native';
 import { ThemeProvider } from '../themes/ThemeProvider';
-import { useUserStore } from '../store/useUserStore';
-
-function useAuthGuard() {
-    const { uid, onboardingDone } = useUserStore();
-    const segments = useSegments();
-    const router = useRouter();
-    const navigationState = useRootNavigationState();
-
-    useEffect(() => {
-        // Se o roteador ainda não carregou as rotas, esperamos
-        if (!navigationState?.key) return;
-
-        const inAuthGroup = segments.includes('(auth)');
-        const inOnboarding = segments.includes('onboarding');
-
-        console.log('[AuthGuard] Check:', { uid, inAuthGroup, segments });
-
-        if (!uid) {
-            if (!inAuthGroup) router.replace('/login');
-        } else if (!onboardingDone) {
-            if (!inOnboarding) router.replace('/onboarding');
-        } else {
-            if (inAuthGroup || inOnboarding) router.replace('/');
-        }
-    }, [uid, onboardingDone, segments, navigationState?.key]);
-
-    return { loading: false }; // Não trava mais na tela de loading
-}
 
 export default function RootLayout() {
-    const { loading } = useAuthGuard();
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+    const segments = useSegments();
+    const router = useRouter();
 
-    // Mantemos o ThemeProvider e o Stack sempre visíveis
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const logged = await AsyncStorage.getItem('isLoggedIn');
+                setIsLoggedIn(logged === 'true');
+            } catch (e) {
+                setIsLoggedIn(false);
+            }
+        };
+        checkAuth();
+    }, []);
+
+    useEffect(() => {
+        if (isLoggedIn === null) return;
+        if (!segments) return;
+
+        const inAuthGroup = segments[0] === '(auth)';
+
+        if (!isLoggedIn && !inAuthGroup) {
+            router.replace('/login');
+        } else if (isLoggedIn && inAuthGroup) {
+            router.replace('/');
+        }
+    }, [isLoggedIn, segments]);
+
+    if (isLoggedIn === null) {
+        return (
+            <View style={{ flex: 1, backgroundColor: '#0A0F1C', justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#a855f7" />
+            </View>
+        );
+    }
+
     return (
         <ThemeProvider>
-            <Stack
-                screenOptions={{
-                    headerStyle: { backgroundColor: '#0A0F1C' },
-                    headerTintColor: '#F1F5F9',
-                    headerTitleStyle: { fontWeight: '600' },
-                    contentStyle: { backgroundColor: '#0A0F1C' },
-                    headerShadowVisible: false,
-                }}
-            >
+            <StatusBar barStyle="light-content" />
+            <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                <Stack.Screen name="onboarding" options={{ headerShown: false }} />
                 <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen name="about" options={{ title: 'Sobre o Projeto' }} />
             </Stack>
         </ThemeProvider>
     );
