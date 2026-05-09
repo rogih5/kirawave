@@ -1,0 +1,73 @@
+// src/features/presets/defaultPresets.ts
+import type { Preset } from '../../types';
+
+export const DEFAULT_PRESETS: Preset[] = [
+    {
+        id: 'adhd-deep-work',
+        name: 'ADHD Deep Work',
+        description: 'Gamma de alta intensidade para manter o cérebro ativo e focado',
+        icon: '🧠',
+        freqKey: 'gamma',
+        ambKey: 'rain',
+        bVol: 75,
+        aVol: 50,
+        durationSecs: 25 * 60,
+        neuroType: 'adhd',
+    },
+    {
+        id: 'focus-boost',
+        name: 'Focus Boost',
+        description: 'Alpha para entrar em estado de fluxo rapidamente',
+        icon: '⚡',
+        freqKey: 'alpha',
+        ambKey: 'cafe',
+        bVol: 70,
+        aVol: 45,
+        durationSecs: 25 * 60,
+        neuroType: 'professional',
+    },
+    {
+        id: 'creative-flow',
+        name: 'Creative Flow',
+        description: 'Theta para pensamento criativo e ideação livre',
+        icon: '🎨',
+        freqKey: 'theta',
+        ambKey: 'forest',
+        bVol: 60,
+        aVol: 55,
+        durationSecs: 45 * 60,
+        neuroType: 'creative',
+    },
+    {
+        id: 'deep-study',
+        name: 'Deep Study',
+        description: 'Beta para memória e absorção de conteúdo',
+        icon: '📚',
+        freqKey: 'beta',
+        ambKey: 'white',
+        bVol: 65,
+        aVol: 35,
+        durationSecs: 50 * 60,
+        neuroType: 'student',
+    },
+    {
+        id: 'evening-wind-down',
+        name: 'Evening Wind Down',
+        description: 'Theta e espaço para relaxar e desacelerar',
+        icon: '🌙',
+        freqKey: 'theta',
+        ambKey: 'space',
+        bVol: 55,
+        aVol: 60,
+        durationSecs: 20 * 60,
+        neuroType: 'evening',
+    },
+];
+
+export const PRESET_BY_NEURO: Record<string, string> = {
+    adhd: 'adhd-deep-work',
+    professional: 'focus-boost',
+    creative: 'creative-flow',
+    student: 'deep-study',
+    evening: 'evening-wind-down',
+};

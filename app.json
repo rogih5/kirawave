@@ -50,6 +50,7 @@
       "startUrl": "/"
     },
     "plugins": [
+      "expo-router",
       [
         "expo-build-properties",
         {
