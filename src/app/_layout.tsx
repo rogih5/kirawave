@@ -4,12 +4,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, ActivityIndicator, StatusBar, Text } from 'react-native';
 import { ThemeProvider } from '../themes/ThemeProvider';
 import { useUserStore } from '../store/useUserStore';
+import { usePremiumStore } from '../store/usePremiumStore';
 
 export default function RootLayout() {
     const { uid, setUser } = useUserStore();
+    const { checkExpiry } = usePremiumStore();
     const [isChecking, setIsChecking] = useState(true);
     const segments = useSegments();
     const router = useRouter();
+
+    // Verifica expiração do premium ao abrir
+    useEffect(() => { checkExpiry(); }, []);
 
     // 1. Verifica persistência ao abrir
     useEffect(() => {
@@ -63,6 +68,8 @@ export default function RootLayout() {
             <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(auth)" options={{ headerShown: false }} />
                 <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="premium" options={{ headerShown: false }} />
+                <Stack.Screen name="about" options={{ headerShown: false }} />
             </Stack>
         </ThemeProvider>
     );
